@@ -1,0 +1,8 @@
+#!/bin/env sh
+yum update
+yum install -y inotify-tools
+yum install -y ansible
+
+echo "${key_mat}" > /home/ec2-user/.ssh/id_rsa
+chmod 600 /home/ec2-user/.ssh/id_rsa
+chown -R ec2-user /home/ec2-user/.ssh
