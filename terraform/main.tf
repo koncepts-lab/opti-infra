@@ -1,54 +1,50 @@
+# Configure Azure Provider
 terraform {
   required_providers {
-    aws = {
-      source  = "hashicorp/aws",
-      version = "~>5.0"
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 3.0"
     }
-    tls = {
-      source = "hashicorp/tls",
-      version = "~>4.0.5"
-    }
-    
-    local = {
-      source = "hashicorp/local",
-      version = "~>2.5.1"
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.0"
     }
   }
 }
 
-provider "aws" {
-  profile = var.profile
-
-  default_tags {
-    tags = {
-      terraform = "true"
-      env       = "${var.product}-${var.env}"
-    }
-  }
+provider "azurerm" {
+  subscription_id = "cbae65ed-46b5-4899-8f50-0a64777cbfea"
+  tenant_id       = "3970c661-584d-4ad9-9a2b-60f2878efac7"
+  features {}
 }
 
 module "networking" {
   source     = "./modules/networking"
-  env        = "${var.product}-${var.env}"
-  prefix     = "${var.product}-${var.env}"
-  redundancy = var.redundancy
 }
 
 locals {
   prefix      = "${var.product}-${var.env}"
-  default_ami = "ami-01c3c55948a949a52"
 }
 
-resource "aws_key_pair" "root_key" {
-  key_name   = "root_key"
-  public_key = var.root_key
+#resource "tls_private_key" "root_key" {
+#  algorithm = "RSA"
+#  rsa_bits  = 4096
+#}
 
-  tags = {
-    Name = "${local.prefix}-root_key"
-  }
-}
 
-data "aws_security_group" "default" {
-  name       = "default"
-  depends_on = [module.networking]
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

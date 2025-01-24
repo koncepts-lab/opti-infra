@@ -1,30 +1,42 @@
+output "resourcegroup_id" {
+  value       = azurerm_resource_group.main.id
+  description = "The resource group id of the resource group being created by this module"
+}
+
+output "resource_group_location" {
+  value = azurerm_resource_group.main.location
+  description = "The resource group location of the resource group being created by this module"
+}
+
+output "resource_group_name" {
+  value = azurerm_resource_group.main.name
+  description = "The resource group name of the resource group being created by this module"
+}
+
 output "vpc_id" {
-  value       = aws_vpc.mainvpc.id
+  value       = azurerm_virtual_network.mainvnet.id
   description = "The vpc id of the vpc being created by this module"
 }
 
-output "public_subnet_id" {
-  value       = aws_subnet.public_subnet[*].id
-  description = "the id of the public subnets"
+output "vm_subnet_id" {
+  # value       = azurerm_subnet.subnet_with_vm[*].id
+  value       = { for zone, subnet in azurerm_subnet.subnet_with_vm : zone => subnet.id }
+  description = "the id of the subnet in which VM resides"
 }
 
-output "private_subnet_id" {
-  value       = aws_subnet.private_subnet[*].id
-  description = "the id of the private subnets"
+output "nat_subnet_id" {
+  #value       = azurerm_subnet.subnet_with_nat[*].id
+  value       = { for zone, subnet in azurerm_subnet.subnet_with_nat : zone => subnet.id }
+  description = "the id of the subnet in which NAT Gateway resides"
 }
 
-output "public_subnets" {
-  value       = aws_subnet.public_subnet
-  description = "the public subnets"
+output "vm_subnet" {
+  value       = azurerm_subnet.subnet_with_vm
+  description = "the VM subnet"
 }
 
-output "private_subnets" {
-  value       = aws_subnet.private_subnet
-  description = "the private subnets"
+output "nat_subnet" {
+  value       = azurerm_subnet.subnet_with_nat
+  description = "the NAT subnet"
 }
 
-
-output "default_sg" {
-  value       = aws_default_security_group.default_sg
-  description = "the default security group"
-}

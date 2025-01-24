@@ -1,117 +1,133 @@
-# create the app server instance which is a large box with enough compute
-# and attach a separate storage for storing RDS items in there
-resource "aws_instance" "app_server" {
-  ami                    = local.default_ami
-  subnet_id              = module.networking.private_subnet_id[0]
-  key_name               = aws_key_pair.internal_key_pair.key_name
-  availability_zone      = module.networking.private_subnets[0].availability_zone
-  vpc_security_group_ids = [aws_security_group.appserver_sg.id]
-  instance_type          = "t4g.2xlarge"
+# Create a network interface
+resource "azurerm_network_interface" "nic" {
+  name                = "main-nic"
+  location            = module.networking.resource_group_location
+  resource_group_name = module.networking.resource_group_name
 
-  root_block_device {
-    volume_size = 50
-    tags = {
-      Name = "${local.prefix}-app_server-root-ebs"
+  ip_configuration {
+    name                          = "internal"
+    subnet_id                     = module.networking.vm_subnet_id["1"]
+    private_ip_address_allocation = "Dynamic"
+  }
+
+  tags = {
+    terraform = "true"
+    env       = "${local.prefix}-nic"
+  }
+}
+
+# Create a VM
+resource "azurerm_linux_virtual_machine" "app_server" {
+  name                = "main-vm"
+  location            = module.networking.resource_group_location
+  resource_group_name = module.networking.resource_group_name
+  # size                = "Standard_DS1_v2"
+  size                = "Standard_D2alds_v6"
+  admin_username      = "testadmin"
+  # admin_password = "Password1234!"
+  # disable_password_authentication = false
+  # zone = local.availability_zones[0]
+  disable_password_authentication = true
+
+  admin_ssh_key {
+    username   = "testadmin"
+    public_key = tls_private_key.internal_key.public_key_openssh
+  }
+  
+  network_interface_ids = [
+    azurerm_network_interface.nic.id
+  ]
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+
+  source_image_reference {
+    publisher = "Canonical"
+    offer     = "UbuntuServer"
+    sku       = "18_04-lts-gen2"
+    # sku       = "20.04-LTS"
+    version   = "latest"
+  }
+
+  timeouts {
+    create = "45m"
+    delete = "30m"
+  }
+}
+
+# Create Storage Account for App Data
+resource "azurerm_storage_account" "app_data" {
+  name                     = "appdata${random_string.unique.result}"
+  resource_group_name      = module.networking.resource_group_name
+  location                 = module.networking.resource_group_location
+  account_tier             = "Standard"
+  account_replication_type = "GRS"
+  
+  blob_properties {
+    versioning_enabled = true
+    container_delete_retention_policy {
+      days = 7
     }
-    delete_on_termination = true
   }
 
   tags = {
-    Name          = "${local.prefix}-appserver-instance"
-    ansible_group = "appserver"
-  }
-
-  user_data = file("userdata/appserver-init.sh")
-}
-
-resource "aws_ebs_volume" "db_volume" {
-  availability_zone = aws_instance.app_server.availability_zone
-  size              = 100
-
-  tags = {
-    Name = "${local.prefix}-appserver-db-ebs"
+    terraform = "true"
+    env       = "${local.prefix}-app-dt-sa"
   }
 }
 
-resource "aws_volume_attachment" "db_volume_attachment" {
-  device_name = "/dev/sdh"
-  instance_id = aws_instance.app_server.id
-  volume_id   = aws_ebs_volume.db_volume.id
+# Create Containers for App Data
+resource "azurerm_storage_container" "app_data" {
+  name                  = "application-data"
+  storage_account_name  = azurerm_storage_account.app_data.name
+  container_access_type = "private"
 }
 
+# Create Storage Account for Backups
+resource "azurerm_storage_account" "backup" {
+  name                     = "backup${random_string.unique.result}"
+  resource_group_name      = module.networking.resource_group_name
+  location                 = module.networking.resource_group_location
+  account_tier             = "Standard"
+  account_replication_type = "RAGRS"
+  
+  blob_properties {
+    versioning_enabled = true
+    container_delete_retention_policy {
+      days = 30
+    }
+  }
 
-resource "aws_s3_bucket" "backup_bucket" {
-  bucket        = "${local.prefix}-backups"
-  force_destroy = false
-  tags = {
-    Name = "${local.prefix}-backups-bucket"
+tags = {
+    terraform = "true"
+    env       = "${local.prefix}-bk-dt-sa"
   }
 }
 
-resource "aws_s3_bucket" "app_data" {
-  bucket        = "${local.prefix}-app-data"
-  force_destroy = true
-  tags = {
-    Name = "${local.prefix}-app-data-bucket"
-  }
+# Create Containers for Backups
+resource "azurerm_storage_container" "backup" {
+  name                  = "system-backups"
+  storage_account_name  = azurerm_storage_account.backup.name
+  container_access_type = "private"
 }
 
-# add a security group ingress and egress roule on port 443
-
-resource "aws_security_group" "appserver_sg" {
-  name        = "appserver_allow_tls"
-  description = "Allow HTTPS traffic inbound and all outbound traffic"
-  vpc_id      = module.networking.vpc_id
-
-  lifecycle {
-    create_before_destroy = true
-  }
-
-  tags = {
-    Name = "${local.prefix}-appserver-sg"
-  }
+# Add network rules for storage accounts
+resource "azurerm_storage_account_network_rules" "app_data_rules" {
+  storage_account_id = azurerm_storage_account.app_data.id
+  default_action     = "Allow"
+  virtual_network_subnet_ids = [
+    module.networking.vm_subnet_id["1"]
+  ]
+  bypass = ["Metrics", "Logging", "AzureServices"]
 }
 
-resource "aws_vpc_security_group_ingress_rule" "appserver_allow_inbound_tls" {
-  security_group_id = aws_security_group.appserver_sg.id
-  ip_protocol       = "tcp"
-  from_port         = 443
-  to_port           = 443
-  cidr_ipv4         = "0.0.0.0/0"
-  tags = {
-    Name = "${local.prefix}-allow-inbound-tls"
-  }
-}
-
-resource "aws_vpc_security_group_egress_rule" "appserver_outbound_tls" {
-  security_group_id = aws_security_group.appserver_sg.id
-  ip_protocol       = -1
-  cidr_ipv4         = "0.0.0.0/0"
-  tags = {
-    Name = "${local.prefix}-allow-outbound-tls"
-  }
-}
-
-resource "aws_vpc_security_group_ingress_rule" "appserver_internal_all_access" {
-  security_group_id            = aws_security_group.appserver_sg.id
-  ip_protocol                  = -1
-  referenced_security_group_id = data.aws_security_group.default.id
-  tags = {
-    Name = "${local.prefix}-allow-jumpbox-all-access"
-  }
-}
-
-resource "aws_vpc_security_group_ingress_rule" "appserver_internal_all_comms" {
-  security_group_id            = aws_security_group.appserver_sg.id
-  ip_protocol                  = -1
-  referenced_security_group_id = aws_security_group.appserver_sg.id
-  tags = {
-    Name = "${local.prefix}-allow-internal-all-access"
-  }
-}
-
-resource "aws_lb_target_group_attachment" "appserver_tga" {
-  target_group_arn = aws_lb_target_group.app_server_tg.arn
-  target_id        = aws_instance.app_server.id
-  port             = 80
+resource "azurerm_storage_account_network_rules" "backup_rules" {
+  storage_account_id = azurerm_storage_account.backup.id
+  default_action     = "Allow"
+  virtual_network_subnet_ids = [
+    module.networking.vm_subnet_id["1"]
+  ]
+  bypass = ["Metrics", "Logging", "AzureServices"]
 }
