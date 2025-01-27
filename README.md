@@ -105,12 +105,8 @@ The infrastructure supports horizontal scaling through:
 ### Required Secrets
 Create a `secrets.tfvars` file with the following variables:
 ```hcl
-storage_account_name     = "your_storage_account"
-storage_account_key      = "your_storage_key"
 jumpbox_admin_username   = "your_admin_username"
 jumpbox_admin_password   = "your_admin_password"
-ssl_certificate_path     = "path/to/ssl.pfx"
-ssl_certificate_password = "cert_password"
 ```
 
 Add `*.tfvars` to `.gitignore` to prevent committing secrets:
@@ -122,7 +118,7 @@ echo "*.tfvars" >> .gitignore
 1. Clone the repository:
    ```bash
    git clone https://github.com/koncepts-lab/opti-infra.git
-   cd opti-infra
+   cd opti-infra\terraform
    ```
 
 2. Initialize Terraform:
@@ -144,8 +140,9 @@ echo "*.tfvars" >> .gitignore
 ### Destroying Infrastructure
 To tear down the infrastructure:
 ```bash
-terraform destroy
+terraform destroy -var-file="secrets.tfvars"
 ```
+Confirm by typing `yes` when prompted.
 
 ### Important Notes
 - Always review the plan before applying
