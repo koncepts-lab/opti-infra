@@ -50,7 +50,7 @@ resource "azurerm_linux_virtual_machine" "jumpbox" {
   disable_password_authentication = true
 
   admin_ssh_key {
-    username   = "jumpboxadmin"
+    username   = var.jumpbox_admin_username
     public_key = tls_private_key.internal_key.public_key_openssh
   }
 

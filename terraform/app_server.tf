@@ -26,7 +26,7 @@ resource "azurerm_linux_virtual_machine" "app_server" {
   disable_password_authentication = true
 
   admin_ssh_key {
-    username   = "testadmin"
+    username   = var.app_server_admin_username
     public_key = tls_private_key.internal_key.public_key_openssh
   }
   
