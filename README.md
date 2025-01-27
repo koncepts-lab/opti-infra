@@ -105,8 +105,8 @@ The infrastructure supports horizontal scaling through:
 ### Required Secrets
 Create a `secrets.tfvars` file with the following variables:
 ```hcl
-jumpbox_admin_username   = "your_admin_username"
-jumpbox_admin_password   = "your_admin_password"
+app_server_admin_username = "your_app_server_admin_username"
+jumpbox_admin_username    = "your_jumpbox_admin_username"
 ```
 
 Add `*.tfvars` to `.gitignore` to prevent committing secrets:
