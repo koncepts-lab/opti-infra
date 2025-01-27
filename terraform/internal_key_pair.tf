@@ -11,10 +11,5 @@ resource "local_sensitive_file" "private_key" {
   file_permission = "0600"
 }
 
-# Optional: Save key for Ansible if needed
-# resource "local_sensitive_file" "private_key_ansible" {
-#  filename        = "${path.module}/../playbooks/azure-internal-key"
-#  content         = tls_private_key.internal_key.private_key_pem
-#  file_permission = "0600"
-# }
+
 

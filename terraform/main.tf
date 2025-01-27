@@ -13,8 +13,8 @@ terraform {
 }
 
 provider "azurerm" {
-  subscription_id = "cbae65ed-46b5-4899-8f50-0a64777cbfea"
-  tenant_id       = "3970c661-584d-4ad9-9a2b-60f2878efac7"
+  # subscription_id = "cbae65ed-46b5-4899-8f50-0a64777cbfea"
+  # tenant_id       = "3970c661-584d-4ad9-9a2b-60f2878efac7"
   features {}
 }
 
@@ -26,10 +26,7 @@ locals {
   prefix      = "${var.product}-${var.env}"
 }
 
-#resource "tls_private_key" "root_key" {
-#  algorithm = "RSA"
-#  rsa_bits  = 4096
-#}
+
 
 
 

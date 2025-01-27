@@ -46,15 +46,11 @@ resource "azurerm_linux_virtual_machine" "jumpbox" {
   resource_group_name = module.networking.resource_group_name
   location            = module.networking.resource_group_location
   size                = "Standard_B1s"  
-  admin_username      = "jumpboxadmin"
-  # admin_password = "Password1234!"
-  # disable_password_authentication = false
+  admin_username      = var.jumpbox_admin_username
   disable_password_authentication = true
 
   admin_ssh_key {
     username   = "jumpboxadmin"
-    # public_key = file("~/.ssh/jumpbox.pub") 
-    #public_key = var.ssh_public_key 
     public_key = tls_private_key.internal_key.public_key_openssh
   }
 

@@ -88,14 +88,3 @@ resource "azurerm_dns_cname_record" "validation" {
   ttl                 = 300
   record              = "example-validation-record-value"  
 }
-
-# Use the certificate in App Service (once validation is complete)
-# resource "azurerm_app_service_certificate" "oi_portal_cert" {
- # name                = "oi-portal-cert"
- # resource_group_name = azurerm_resource_group.main.name
-  #key_vault_secret_id = azurerm_key_vault_certificate.oi_portal_cert.secret_id
- # location                = azurerm_resource_group.main.location
- # tags = {
- #   environment = "production"
- # }
-#}

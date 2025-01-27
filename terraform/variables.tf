@@ -8,8 +8,12 @@ variable "product" {
   default = "oii"
 }
 
+variable "app_server_admin_username" {
+  description = "Admin username for the app server VM"
+  type        = string
+}
 
-#variable "ssh_public_key" {
-#  description = "Public key for SSH access to jumpbox"
-#  type        = string
-#}
+variable "jumpbox_admin_username" {
+  description = "Admin username for the jumpbox VM"
+  type        = string
+}

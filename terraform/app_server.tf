@@ -21,12 +21,8 @@ resource "azurerm_linux_virtual_machine" "app_server" {
   name                = "main-vm"
   location            = module.networking.resource_group_location
   resource_group_name = module.networking.resource_group_name
-  # size                = "Standard_DS1_v2"
   size                = "Standard_D2alds_v6"
-  admin_username      = "testadmin"
-  # admin_password = "Password1234!"
-  # disable_password_authentication = false
-  # zone = local.availability_zones[0]
+  admin_username      = var.app_server_admin_username
   disable_password_authentication = true
 
   admin_ssh_key {
@@ -47,7 +43,6 @@ resource "azurerm_linux_virtual_machine" "app_server" {
     publisher = "Canonical"
     offer     = "UbuntuServer"
     sku       = "18_04-lts-gen2"
-    # sku       = "20.04-LTS"
     version   = "latest"
   }
 
