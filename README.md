@@ -21,8 +21,8 @@ The network is distributed across 3 Availability Zones with a total of 8 subnets
 - Access managed through Jumpbox
 
 #### Jumpbox Configuration
-- Public IP: 172.172.175.70
-- Admin Username: jumpboxadmin
+- Fixed IP address for consistent and reliable access to the Jumpbox
+- SSH key-based authentication
 - Functions as secure entry point for app_server management
 
 ### Network Security
@@ -63,7 +63,7 @@ Three dedicated storage accounts:
 ### Production Environment
 - Domain: oi-portal.com
 - Jumpbox Access:
-  - IP: 172.172.175.70
+  - IP: 172.191.92.66
   - Username: jumpboxadmin
 
 ## Architecture Diagram
