@@ -98,6 +98,36 @@ Azure Infrastructure
     └── Validated through DNS
 ```
 
+### Workspaces
+
+```
+opti-infra/
+├── terraform/
+│   ├── environments/
+│   │   ├── dev/
+│   │   │   ├── terraform.tfvars        # Dev environment variables
+│   │   │   └── backend.tf              # Dev state configuration
+│   │   ├── test/
+│   │   │   ├── terraform.tfvars        # Test environment variables
+│   │   │   └── backend.tf              # Test state configuration
+│   │   └── prod/
+│   │       ├── terraform.tfvars        # Production environment variables
+│   │       └── backend.tf              # Prod state configuration
+│   ├── modules/
+│   │   └── networking/
+│   │       ├── main.tf
+│   │       ├── variables.tf
+│   │       └── outputs.tf
+│   ├── workspaces/
+│   │   ├── dev.tfvars                  # Workspace-specific variables for dev
+│   │   ├── test.tfvars                 # Workspace-specific variables for test
+│   │   └── prod.tfvars                 # Workspace-specific variables for prod
+│   ├── secrets/
+│   │   └── secrets.tfvars              # Sensitive variables (gitignored)
+│   └── README.md
+└── .gitignore
+```
+
 ## Security Notes
 
 1. All production access must route through the Jumpbox
@@ -193,6 +223,27 @@ Before deploying, you need to set up your secrets configuration:
    terraform apply -var-file="secrets.tfvars"
    ```
    Confirm by typing `yes` when prompted.
+
+
+## Workspace Commands
+For development:
+
+```bash terraform workspace new dev
+terraform workspace select dev
+terraform plan -var-file="environments/dev/terraform.tfvars" -var-file="secrets/secrets.tfvars"
+ ```
+For testing:
+ ```bash
+terraform workspace new test
+terraform workspace select test
+terraform plan -var-file="environments/test/terraform.tfvars" -var-file="secrets/secrets.tfvars"
+```
+For production:
+```bash
+terraform workspace new prod
+terraform workspace select prod
+terraform plan -var-file="environments/prod/terraform.tfvars" -var-file="secrets/secrets.tfvars"
+```
 
 ### Destroying Infrastructure
 To tear down the infrastructure:
