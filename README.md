@@ -75,6 +75,29 @@ Three dedicated storage accounts:
 [Jumpbox] ----------+
 ```
 
+```
+Azure Infrastructure
+├── Key Vault
+│   ├── Internal SSH Keys (from internal_key_pair.tf)
+│   ├── SSL Certificates (from certs.tf)
+│   └── App Gateway Certificates (from certs.tf)
+│
+├── Networking (from networking module)
+│   ├── Resource Group
+│   ├── Virtual Network
+│   └── Subnets
+│
+├── Jumpbox
+│   ├── Uses Internal Keys from Key Vault
+│   ├── Placed in VM subnet
+│   └── Uses environment-specific configs
+│
+└── DNS & Certificates
+    ├── Stored in Key Vault
+    ├── Used by App Gateway
+    └── Validated through DNS
+```
+
 ## Security Notes
 
 1. All production access must route through the Jumpbox
@@ -102,17 +125,51 @@ The infrastructure supports horizontal scaling through:
 - Azure CLI
 - Azure subscription and credentials configured
 
-### Required Secrets
-Create a `secrets.tfvars` file with the following variables:
-```hcl
-app_server_admin_username = "your_app_server_admin_username"
-jumpbox_admin_username    = "your_jumpbox_admin_username"
-```
+## Secrets Configuration
 
-Add `*.tfvars` to `.gitignore` to prevent committing secrets:
-```bash
-echo "*.tfvars" >> .gitignore
-```
+Before deploying, you need to set up your secrets configuration:
+
+1. Navigate to the secrets directory:
+   ```bash
+   cd terraform/secrets
+   ```
+
+2. Copy the example file to create your secrets file:
+   ```bash
+   cp secrets.tfvars.example secrets.tfvars
+   ```
+
+3. Edit secrets.tfvars with your actual values:
+   ```bash
+   nano secrets.tfvars
+   ```
+
+### Required Values:
+- **Azure Authentication**
+  - subscription_id: Your Azure subscription ID
+  - tenant_id: Your Azure tenant ID
+
+- **App Server Access**
+  - app_server_admin_username: Username for app server access
+  - app_server_ssh_key: Your SSH public key for secure access
+
+- **Key Vault Access**
+  - key_vault_object_id: Object ID for Key Vault access
+
+### Optional Values:
+- **Storage Access** (Auto-generated if not provided)
+  - backup_storage_access_key
+  - app_data_storage_access_key
+
+- **Email Configuration** (If using email services)
+  - email_username
+  - email_password
+
+⚠️ IMPORTANT: 
+- Never commit secrets.tfvars to version control
+- Keep your SSH keys secure
+- Rotate access keys regularly
+- Use strong passwords for all credentials
 
 ### Setup Steps
 1. Clone the repository:

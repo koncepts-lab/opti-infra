@@ -1,7 +1,28 @@
 #!/bin/bash
-yum install -y inotify-tools ansible
+
+# Update system
+dnf update -y
+
+# Install required utilities
+dnf install -y \
+    inotify-tools \
+    ansible \
+    xfsprogs
+
+# Wait for data disk to be available
+while [ ! -b /dev/sdc ]; do
+    echo "Waiting for data disk to be attached..."
+    sleep 1
+done
+
+# Create PostgreSQL data directory
 mkdir -p /var/lib/pgsql
-until [[ -b /dev/sdh ]]; do sleep 1 ; done
-mkfs -t xfs /dev/sdh
-echo '/dev/sdh /var/lib/pgsql xfs defaults 0 0' >> /etc/fstab
+
+# Format the data disk (in Azure, typically /dev/sdc)
+mkfs.xfs /dev/sdc
+
+# Add entry to fstab for automatic mounting after reboot
+echo "/dev/sdc /var/lib/pgsql xfs defaults 0 0" >> /etc/fstab
+
+# Mount all filesystems
 mount -a

@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# Update system packages
+dnf update -y
+
+# Install required packages
+dnf install -y inotify-tools
+dnf install -y ansible
+
+# Create .ssh directory if it doesn't exist
+mkdir -p /home/jumpboxadmin/.ssh
+
+# Write SSH private key
+echo "${key_mat}" > /home/jumpboxadmin/.ssh/id_rsa
+
+# Set correct permissions and ownership
+chmod 600 /home/jumpboxadmin/.ssh/id_rsa
+chown -R jumpboxadmin:jumpboxadmin /home/jumpboxadmin/.ssh
