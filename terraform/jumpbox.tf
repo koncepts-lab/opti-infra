@@ -122,8 +122,6 @@ resource "azurerm_linux_virtual_machine" "jumpbox" {
 
   depends_on = [
     tls_private_key.internal_key,
-    aws_key_pair.root_key,
-    aws_key_pair.internal_key_pair
   ]
 }
 
