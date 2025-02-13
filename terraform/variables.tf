@@ -54,6 +54,11 @@ variable "jumpbox_admin_username" {
   description = "The admin username for the jumpbox"
 }
 
+variable "jumpbox_ssh_key" {
+  type        = string
+  description = "SSH public key for jumpbox access"
+}
+
 variable "jumpbox_os_disk_size" {
   type        = number
   description = "The size of the jumpbox OS disk in GB"

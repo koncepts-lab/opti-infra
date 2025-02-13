@@ -74,7 +74,7 @@ resource "azurerm_linux_virtual_machine" "jumpbox" {
 
   admin_ssh_key {
     username   = var.jumpbox_admin_username
-    public_key = tls_private_key.internal_key.public_key_openssh
+    public_key = var.jumpbox_ssh_key
   }
 
   network_interface_ids = [

@@ -1,262 +1,194 @@
-# Opti Infrastructure Terraform Components
-# Azure Infrastructure Deployment
+# Opti Infrastructure Terraform Azure Deployment
 
-This repository contains the Terraform configuration for OII's Azure infrastructure deployment, mirroring the existing AWS architecture. The infrastructure is designed for high availability, security, and scalability.
+## Overview
 
-## Infrastructure Overview
+This repository contains the Terraform configuration for deploying a robust, secure, and scalable infrastructure on Microsoft Azure. The infrastructure is designed to provide high availability, strong security, and flexible scalability across multiple environments.
 
-### Network Architecture
+## Infrastructure Architecture
 
-The network is distributed across 3 Availability Zones with a total of 8 subnets:
-- 6 active subnets (2 per AZ):
-  - Virtual Machine subnet
-  - NAT Gateway subnet
-- 2 reserved subnets for future expansion
+### Network Design
 
-### Compute Resources
+- **Availability Zones**: Distributed across 3 Availability Zones
+- **Subnet Configuration**: 
+  - 6 active subnets (2 per Availability Zone)
+    - Virtual Machine subnets
+    - NAT Gateway subnets
+  - 2 reserved subnets for future expansion
 
-#### Virtual Machine
-- Single `app_server` deployed in AZ-1
-- Private IP configuration
-- Access managed through Jumpbox
+### Key Components
 
-#### Jumpbox Configuration
-- Fixed IP address for consistent and reliable access to the Jumpbox
-- SSH key-based authentication
-- Functions as secure entry point for app_server management
+1. **Compute Resources**
+   - Single `app_server` deployed in Availability Zone 1
+   - Private IP configuration
+   - Jumpbox for secure administrative access
 
-### Network Security
+2. **Network Security**
+   - 3 NAT Gateways for high availability
+   - Application Gateway with SSL termination
+   - Comprehensive Network Security Groups (NSGs)
 
-#### NAT Gateway Setup
-- 3 NAT Gateways deployed across Availability Zones
-- Configured for high availability and redundancy
+3. **Storage Infrastructure**
+   - Three dedicated storage accounts:
+     - `app_data`: Primary application storage
+     - `backup_data`: Backup retention
+     - `logs`: Load balancer and application logging
 
-#### Load Balancer Configuration
-- Public-facing load balancer
-- Backend pool configured with app_server NIC
-- Active health monitoring
-- SSL termination for oi-portal.com
-- Certificate stored in Azure Key Vault
+4. **Security Measures**
+   - Azure Key Vault for certificate and secret management
+   - Private network architecture
+   - Secure, key-based Jumpbox access
 
-### Storage Infrastructure
+## Prerequisites
 
-Three dedicated storage accounts:
-1. app_data: Primary application storage
-2. backup_data: Backup retention
-3. logs: Load Balancer logging
+### System Requirements
+- Terraform >= 1.0.0
+- Azure CLI
+- Active Azure subscription
 
-### Security Measures
+### Authentication
+- Azure subscription credentials
+- Configured Azure CLI access
 
-- Private network architecture
-- Secure Jumpbox access
-- Azure Key Vault SSL certificate management
-- Network segmentation across zones
-
-### Scalability Features
-
-- 2 reserved subnets for expansion
-- Load Balancer configured for additional backends
-- Distributed NAT Gateway architecture
-
-## Access Information
-
-### Production Environment
-- Domain: oi-portal.com
-- Jumpbox Access:
-  - IP: 172.191.92.66
-  - Username: jumpboxadmin
-
-## Architecture Diagram
-
-```
-[Internet] --> [Load Balancer (SSL)] --> [app_server]
-                     ^
-                     |
-[Jumpbox] ----------+
-```
-
-```
-Azure Infrastructure
-├── Key Vault
-│   ├── Internal SSH Keys (from internal_key_pair.tf)
-│   ├── SSL Certificates (from certs.tf)
-│   └── App Gateway Certificates (from certs.tf)
-│
-├── Networking (from networking module)
-│   ├── Resource Group
-│   ├── Virtual Network
-│   └── Subnets
-│
-├── Jumpbox
-│   ├── Uses Internal Keys from Key Vault
-│   ├── Placed in VM subnet
-│   └── Uses environment-specific configs
-│
-└── DNS & Certificates
-    ├── Stored in Key Vault
-    ├── Used by App Gateway
-    └── Validated through DNS
-```
-
-### Workspaces
+## Repository Structure
 
 ```
 opti-infra/
 ├── terraform/
-│   ├── environments/
+│   ├── environments/           # Environment-specific configurations
 │   │   ├── dev/
-│   │   │   ├── terraform.tfvars        # Dev environment variables
-│   │   │   └── backend.tf              # Dev state configuration
 │   │   ├── test/
-│   │   │   ├── terraform.tfvars        # Test environment variables
-│   │   │   └── backend.tf              # Test state configuration
 │   │   └── prod/
-│   │       ├── terraform.tfvars        # Production environment variables
-│   │       └── backend.tf              # Prod state configuration
-│   ├── modules/
+│   ├── modules/                # Reusable Terraform modules
 │   │   └── networking/
-│   │       ├── main.tf
-│   │       ├── variables.tf
-│   │       └── outputs.tf
-│   ├── workspaces/
-│   │   ├── dev.tfvars                  # Workspace-specific variables for dev
-│   │   ├── test.tfvars                 # Workspace-specific variables for test
-│   │   └── prod.tfvars                 # Workspace-specific variables for prod
-│   ├── secrets/
-│   │   └── secrets.tfvars              # Sensitive variables (gitignored)
-│   └── README.md
-└── .gitignore
+│   ├── secrets/                # Sensitive configuration (gitignored)
+│   ├── templates/              # Configuration templates
+│   ├── userdata/               # Initialization scripts
+│   └── main.tf                 # Primary Terraform configuration
 ```
-
-## Security Notes
-
-1. All production access must route through the Jumpbox
-2. SSL certificates are managed via Azure Key Vault
-3. Private networking is enforced for all internal resources
-
-## Maintenance Guidelines
-
-1. Regular monitoring of NAT Gateway health
-2. Storage account capacity monitoring
-3. SSL certificate renewal tracking
-4. Load Balancer logs review
-
-## Future Expansion
-
-The infrastructure supports horizontal scaling through:
-1. Reserved subnet space
-2. Load Balancer backend pool expansion
-3. Distributed NAT Gateway architecture
 
 ## Deployment Instructions
 
-### Prerequisites
-- Terraform >= 1.0.0
-- Azure CLI
-- Azure subscription and credentials configured
-
-## Secrets Configuration
-
-Before deploying, you need to set up your secrets configuration:
+### 1. Prepare Secrets Configuration
 
 1. Navigate to the secrets directory:
    ```bash
    cd terraform/secrets
    ```
 
-2. Copy the example file to create your secrets file:
+2. Copy the secrets template:
    ```bash
    cp secrets.tfvars.example secrets.tfvars
    ```
 
-3. Edit secrets.tfvars with your actual values:
+3. Edit `secrets.tfvars` with your specific values:
    ```bash
    nano secrets.tfvars
    ```
 
-### Required Values:
+#### Required Configuration Values
 - **Azure Authentication**
-  - subscription_id: Your Azure subscription ID
-  - tenant_id: Your Azure tenant ID
+  - `subscription_id`: Your Azure subscription ID
+  - `tenant_id`: Your Azure tenant ID
 
 - **App Server Access**
-  - app_server_admin_username: Username for app server access
-  - app_server_ssh_key: Your SSH public key for secure access
+  - `app_server_admin_username`: Admin username
+  - `app_server_ssh_key`: SSH public key
 
 - **Key Vault Access**
-  - key_vault_object_id: Object ID for Key Vault access
+  - `key_vault_object_id`: Key Vault access object ID
 
-### Optional Values:
-- **Storage Access** (Auto-generated if not provided)
-  - backup_storage_access_key
-  - app_data_storage_access_key
+#### Optional Configuration
+- Storage access keys
+- Email service credentials
 
-- **Email Configuration** (If using email services)
-  - email_username
-  - email_password
+### 2. Initialize Terraform
 
-⚠️ IMPORTANT: 
-- Never commit secrets.tfvars to version control
-- Keep your SSH keys secure
-- Rotate access keys regularly
-- Use strong passwords for all credentials
+```bash
+# Navigate to terraform directory
+cd terraform
 
-### Setup Steps
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/koncepts-lab/opti-infra.git
-   cd opti-infra\terraform
-   ```
+# Initialize Terraform
+terraform init
+```
 
-2. Initialize Terraform:
-   ```bash
-   terraform init
-   ```
+### 3. Select Environment Workspace
 
-3. Review the deployment plan:
-   ```bash
-   terraform plan -var-file="secrets.tfvars"
-   ```
-
-4. Apply the infrastructure:
-   ```bash
-   terraform apply -var-file="secrets.tfvars"
-   ```
-   Confirm by typing `yes` when prompted.
-
-
-## Workspace Commands
-For development:
-
-```bash terraform workspace new dev
+```bash
+# Create and select workspace
+terraform workspace new dev
 terraform workspace select dev
-terraform plan -var-file="environments/dev/terraform.tfvars" -var-file="secrets/secrets.tfvars"
- ```
-For testing:
- ```bash
+```
+
+### 4. Plan Infrastructure
+
+```bash
+# Review planned changes
+terraform plan \
+  -var-file="environments/dev/terraform.tfvars" \
+  -var-file="secrets/secrets.tfvars"
+```
+
+### 5. Apply Infrastructure
+
+```bash
+# Deploy infrastructure
+terraform apply \
+  -var-file="environments/dev/terraform.tfvars" \
+  -var-file="secrets/secrets.tfvars"
+```
+
+## Environment Management
+
+### Workspace Commands
+
+```bash
+# Development Environment
+terraform workspace new dev
+terraform workspace select dev
+terraform plan -var-file="environments/dev/terraform.tfvars"
+
+# Testing Environment
 terraform workspace new test
 terraform workspace select test
-terraform plan -var-file="environments/test/terraform.tfvars" -var-file="secrets/secrets.tfvars"
-```
-For production:
-```bash
+terraform plan -var-file="environments/test/terraform.tfvars"
+
+# Production Environment
 terraform workspace new prod
 terraform workspace select prod
-terraform plan -var-file="environments/prod/terraform.tfvars" -var-file="secrets/secrets.tfvars"
+terraform plan -var-file="environments/prod/terraform.tfvars"
 ```
 
-### Destroying Infrastructure
-To tear down the infrastructure:
+## Destroying Infrastructure
+
+⚠️ **Caution**: This will remove all resources in the current workspace.
+
 ```bash
-terraform destroy -var-file="secrets.tfvars"
+terraform destroy \
+  -var-file="environments/dev/terraform.tfvars" \
+  -var-file="secrets/secrets.tfvars"
 ```
-Confirm by typing `yes` when prompted.
 
-### Important Notes
-- Always review the plan before applying
-- Keep terraform state files secure
-- Run `terraform init` after pulling new changes
-- Use workspaces for different environments
+## Security Guidelines
+
+1. Never commit `secrets.tfvars` to version control
+2. Use strong, unique passwords
+3. Regularly rotate access keys
+4. Limit SSH access to trusted IP ranges
+5. Monitor Key Vault and storage account logs
+
+## Maintenance Recommendations
+
+- Regularly review NAT Gateway health
+- Monitor storage account capacity
+- Track SSL certificate expiration
+- Audit Application Gateway logs
+- Perform periodic security assessments
+
+## Scalability Features
+
+- Reserved subnet space for expansion
+- Distributed NAT Gateway architecture
+- Configurable load balancer backend pool
 
 ## Support
 

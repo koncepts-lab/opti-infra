@@ -1,0 +1,23 @@
+[jumpbox]
+${jumpbox_public_ip} ansible_user=${jumpbox_admin_username}
+
+[jumpbox:vars]
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+
+[web]
+${app_server_private_ip}
+
+[workers]
+%{ for worker_ip in worker_private_ips ~}
+${worker_ip}
+%{ endfor ~}
+
+[web:vars]
+ansible_ssh_private_key_file=~/.ssh/oii-internal-key-rsa
+ansible_ssh_common_args='-o StrictHostKeyChecking=no -o ProxyCommand="ssh ${jumpbox_admin_username}@${jumpbox_public_ip} -i ~/.ssh/oii-internal-key-rsa -W %h:%p"'
+ansible_user=${app_server_admin_username}
+
+[workers:vars]
+ansible_ssh_private_key_file=~/.ssh/oii-internal-key-rsa
+ansible_ssh_common_args='-o StrictHostKeyChecking=no -o ProxyCommand="ssh ${jumpbox_admin_username}@${jumpbox_public_ip} -i ~/.ssh/oii-internal-key-rsa -W %h:%p"'
+ansible_user=${app_server_admin_username} 

@@ -38,8 +38,8 @@ resource "azurerm_application_gateway" "app_gateway" {
   location            = module.networking.resource_group_location
 
   sku {
-    name     = "Standard_v2"
-    tier     = "Standard_v2"
+    name     = "WAF_v2"
+    tier     = "WAF_v2"
     capacity = 2
   }
 
@@ -51,6 +51,11 @@ resource "azurerm_application_gateway" "app_gateway" {
   frontend_port {
     name = "https-port"
     port = 443
+  }
+
+  frontend_port {
+    name = "http-port"
+    port = 80
   }
 
   frontend_ip_configuration {
@@ -75,7 +80,6 @@ resource "azurerm_application_gateway" "app_gateway" {
     protocol             = "Http"
     request_timeout      = 60
     path                 = "/"
-
     probe_name           = "health-probe"
   }
 
@@ -98,6 +102,29 @@ resource "azurerm_application_gateway" "app_gateway" {
     frontend_port_name            = "https-port"
     protocol                      = "Https"
     ssl_certificate_name          = "app-gateway-cert"
+  }
+
+  http_listener {
+    name                           = "http-listener"
+    frontend_ip_configuration_name = "frontend-ip-config"
+    frontend_port_name            = "http-port"
+    protocol                      = "Http"
+  }
+
+  redirect_configuration {
+    name                 = "http-to-https"
+    redirect_type        = "Permanent"
+    target_listener_name = "https-listener"
+    include_path         = true
+    include_query_string = true
+  }
+
+  request_routing_rule {
+    name                        = "http-to-https-rule"
+    rule_type                  = "Basic"
+    http_listener_name         = "http-listener"
+    redirect_configuration_name = "http-to-https"
+    priority                   = 2
   }
 
   request_routing_rule {
@@ -124,6 +151,20 @@ resource "azurerm_application_gateway" "app_gateway" {
     enabled_log {
       category = "ApplicationGatewayFirewallLog"
     }
+  }
+
+  ssl_policy {
+    policy_type = "Predefined"
+    policy_name = "AppGwSslPolicy20170401S"  # Or a more recent policy
+  }
+
+  waf_configuration {
+    enabled                  = true
+    firewall_mode           = "Prevention"
+    rule_set_type          = "OWASP"
+    rule_set_version       = "3.2"
+    file_upload_limit_mb   = 100
+    max_request_body_size_kb = 128
   }
 
   tags = {
