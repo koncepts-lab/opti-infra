@@ -134,7 +134,7 @@ resource "azurerm_linux_virtual_machine" "jumpbox" {
   source_image_reference {
   publisher = "RedHat"
   offer     = "RHEL"
-  sku       = "8-lvm-gen2"
+  sku       = "9_5-lvm-gen2"
   version   = "latest"
 }
 
