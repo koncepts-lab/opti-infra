@@ -1,16 +1,21 @@
-# Network Security Group (NSG) for app server
-# This is equivalent to AWS Security Group (aws_security_group)
-# In Azure, NSGs can be attached to subnets or network interfaces
+# =============================================================================
+# Application Server Configuration
+# Purpose: Deploys the main application server with associated storage and networking
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Network Security Group
+# Defines security rules for the application server
+# -----------------------------------------------------------------------------
 resource "azurerm_network_security_group" "appserver_nsg" {
   name                = "${local.prefix}-appserver-nsg"
   location            = module.networking.resource_group_location
   resource_group_name = module.networking.resource_group_name
 
-  # Allow HTTPS inbound - Port 443
-  # Equivalent to aws_vpc_security_group_ingress_rule for HTTPS
+  # Allow HTTPS inbound
   security_rule {
     name                       = "AllowHTTPS"
-    priority                   = 1001  # Lower number = higher priority
+    priority                   = 1001
     direction                  = "Inbound"
     access                     = "Allow"
     protocol                   = "Tcp"
@@ -20,17 +25,16 @@ resource "azurerm_network_security_group" "appserver_nsg" {
     destination_address_prefix = "*"
   }
 
-  # Allow all internal communication
-  # Equivalent to aws_vpc_security_group_ingress_rule for internal traffic
+  # Allow internal communication
   security_rule {
     name                       = "AllowInternalAll"
     priority                   = 1002
     direction                  = "Inbound"
     access                     = "Allow"
-    protocol                   = "*"  # All protocols
+    protocol                   = "*"
     source_port_range         = "*"
     destination_port_range    = "*"
-    source_address_prefix     = "VirtualNetwork"  # Only within VNet
+    source_address_prefix     = "VirtualNetwork"
     destination_address_prefix = "VirtualNetwork"
   }
 
@@ -39,8 +43,10 @@ resource "azurerm_network_security_group" "appserver_nsg" {
   }
 }
 
-# Network Interface for app server
-# This is the Azure equivalent of AWS ENI (Elastic Network Interface)
+# -----------------------------------------------------------------------------
+# Network Interface
+# Creates the primary network interface for the app server
+# -----------------------------------------------------------------------------
 resource "azurerm_network_interface" "app_server_nic" {
   name                = "${local.prefix}-appserver-nic"
   location            = module.networking.resource_group_location
@@ -49,7 +55,7 @@ resource "azurerm_network_interface" "app_server_nic" {
   ip_configuration {
     name                          = "internal"
     subnet_id                     = module.networking.vm_subnet_id["1"]  # Using first AZ
-    private_ip_address_allocation = "Dynamic"  # Similar to AWS auto-assign
+    private_ip_address_allocation = "Dynamic"
   }
 
   tags = {
@@ -57,49 +63,58 @@ resource "azurerm_network_interface" "app_server_nic" {
   }
 }
 
-# Associate NSG with Network Interface
-# In AWS this is handled automatically by the security group association
+# -----------------------------------------------------------------------------
+# Network Security Group Association
+# Links the NSG to the network interface
+# -----------------------------------------------------------------------------
 resource "azurerm_network_interface_security_group_association" "app_nsg_association" {
   network_interface_id      = azurerm_network_interface.app_server_nic.id
   network_security_group_id = azurerm_network_security_group.appserver_nsg.id
 }
 
-# App Server Virtual Machine
-# This replaces the aws_instance resource
+# -----------------------------------------------------------------------------
+# Virtual Machine
+# Creates the application server with both internal and external SSH key access
+# -----------------------------------------------------------------------------
 resource "azurerm_linux_virtual_machine" "app_server" {
   name                = "${local.prefix}-appserver"
   resource_group_name = module.networking.resource_group_name
   location            = module.networking.resource_group_location
-  size                = "Standard_D8ps_v5"  # ARM-based VM, equivalent to t4g.2xlarge
+  size                = "Standard_D8ps_v5"  # ARM-based VM
   admin_username      = var.app_server_admin_username
 
-  # Network interface attachment
+  # Configure both provided (external) and internal SSH keys
+  dynamic "admin_ssh_key" {
+    for_each = [
+      {
+        username   = var.app_server_admin_username
+        public_key = var.app_server_ssh_key  # External key for CI/CD access
+      },
+      {
+        username   = var.app_server_admin_username
+        public_key = tls_private_key.internal_key.public_key_openssh  # Internal key for infrastructure communication
+      }
+    ]
+    content {
+      username   = admin_ssh_key.value.username
+      public_key = admin_ssh_key.value.public_key
+    }
+  }
+
+  # Network interface configuration
   network_interface_ids = [
     azurerm_network_interface.app_server_nic.id
   ]
 
-  # SSH key configuration
-  # Equivalent to key_name in AWS
-  admin_ssh_key {
-    username   = var.app_server_admin_username
-    public_key = tls_private_key.internal_key.public_key_openssh
-  }
-
-  # OS Disk Configuration
-  # Equivalent to root_block_device in AWS
+  # OS disk configuration
   os_disk {
     name                 = "${local.prefix}-appserver-os-disk"
     caching              = "ReadWrite"
     storage_account_type = "Premium_LRS"  # Premium SSD for better performance
-    disk_size_gb         = 50  # Same as AWS configuration
-
-    tags = {
-      Name = "${local.prefix}-app_server-root-disk"
-    }
+    disk_size_gb         = 50
   }
 
-  # VM Image Configuration
-  # Equivalent to AMI in AWS
+  # OS image configuration - RedHat Enterprise Linux
   source_image_reference {
     publisher = "RedHat"
     offer     = "RHEL"
@@ -107,9 +122,15 @@ resource "azurerm_linux_virtual_machine" "app_server" {
     version   = "latest"
   }
 
-  # User data script
-  # Same functionality as AWS user_data
-  custom_data = base64encode(file("userdata/appserver-init.sh"))
+  # Required for RHEL plan
+  plan {
+    name      = "8-gen2"
+    product   = "rhel"
+    publisher = "RedHat"
+  }
+
+  # Initialize the app server with required software and configuration
+  custom_data = base64encode(file("${path.module}/userdata/appserver-init.sh"))
 
   tags = {
     Name          = "${local.prefix}-appserver-instance"
@@ -117,23 +138,27 @@ resource "azurerm_linux_virtual_machine" "app_server" {
   }
 }
 
-# Managed Disk for Database
-# Equivalent to aws_ebs_volume
+# -----------------------------------------------------------------------------
+# Database Storage
+# Creates and attaches a managed disk for database storage
+# -----------------------------------------------------------------------------
 resource "azurerm_managed_disk" "db_disk" {
   name                 = "${local.prefix}-db-disk"
   location            = module.networking.resource_group_location
   resource_group_name = module.networking.resource_group_name
   storage_account_type = "Premium_LRS"  # Premium SSD for database performance
   create_option        = "Empty"
-  disk_size_gb         = 100  # Same size as AWS EBS volume
+  disk_size_gb         = 100
 
   tags = {
     Name = "${local.prefix}-appserver-db-disk"
   }
 }
 
-# Attach Data Disk to VM
-# Equivalent to aws_volume_attachment
+# -----------------------------------------------------------------------------
+# Database Disk Attachment
+# Attaches the database disk to the app server
+# -----------------------------------------------------------------------------
 resource "azurerm_virtual_machine_data_disk_attachment" "db_disk_attachment" {
   managed_disk_id    = azurerm_managed_disk.db_disk.id
   virtual_machine_id = azurerm_linux_virtual_machine.app_server.id
@@ -141,10 +166,13 @@ resource "azurerm_virtual_machine_data_disk_attachment" "db_disk_attachment" {
   caching            = "ReadWrite"
 }
 
+# -----------------------------------------------------------------------------
+# Storage Accounts
+# Creates storage accounts for backups and application data
+# -----------------------------------------------------------------------------
 # Storage Account for Backups
-# Equivalent to S3 bucket for backups
 resource "azurerm_storage_account" "backup_storage" {
-  name                     = replace("${local.prefix}backups", "-", "")  # Storage account names can't have hyphens
+  name                     = replace("${local.prefix}backups", "-", "")
   resource_group_name      = module.networking.resource_group_name
   location                = module.networking.resource_group_location
   account_tier            = "Standard"
@@ -156,7 +184,6 @@ resource "azurerm_storage_account" "backup_storage" {
 }
 
 # Storage Account for Application Data
-# Equivalent to S3 bucket for application data
 resource "azurerm_storage_account" "app_data_storage" {
   name                     = replace("${local.prefix}appdata", "-", "")
   resource_group_name      = module.networking.resource_group_name
@@ -169,24 +196,34 @@ resource "azurerm_storage_account" "app_data_storage" {
   }
 }
 
+# -----------------------------------------------------------------------------
 # Storage Containers
-# Equivalent to S3 bucket folder/prefix
+# Creates containers within the storage accounts
+# -----------------------------------------------------------------------------
 resource "azurerm_storage_container" "backup_container" {
   name                  = "backups"
   storage_account_name  = azurerm_storage_account.backup_storage.name
-  container_access_type = "private"  # Private access only
+  container_access_type = "private"
 }
 
 resource "azurerm_storage_container" "app_data_container" {
   name                  = "appdata"
   storage_account_name  = azurerm_storage_account.app_data_storage.name
-  container_access_type = "private"  # Private access only
+  container_access_type = "private"
 }
 
+# -----------------------------------------------------------------------------
 # Application Gateway Backend Pool Association
-# Equivalent to aws_lb_target_group_attachment
-resource "azurerm_application_gateway_backend_address_pool_address" "app_server" {
-  name                    = "${local.prefix}-app-server"
-  backend_address_pool_id = azurerm_application_gateway.app_gateway.backend_address_pool[0].id
-  ip_address              = azurerm_network_interface.app_server_nic.private_ip_address
+# Associates the app server with the Application Gateway backend pool
+# -----------------------------------------------------------------------------
+resource "azurerm_app_configuration_key" "backend_pool" {
+  configuration_store_id = azurerm_application_gateway.app_gateway.id
+  key                   = "${local.prefix}-backend-pool"
+  value                 = azurerm_network_interface.app_server_nic.private_ip_address
+  
+  depends_on = [
+    azurerm_application_gateway.app_gateway,
+    azurerm_network_interface.app_server_nic
+  ]
 }
+

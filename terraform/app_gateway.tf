@@ -137,21 +137,7 @@ resource "azurerm_application_gateway" "app_gateway" {
   }
 
   # Enable logging
-  diagnostic_setting {
-    name                       = "app-gateway-logs"
-    target_resource_id        = azurerm_storage_account.logs.id
-    storage_account_id        = azurerm_storage_account.logs.id
-
-    enabled_log {
-      category = "ApplicationGatewayAccessLog"
-    }
-    enabled_log {
-      category = "ApplicationGatewayPerformanceLog"
-    }
-    enabled_log {
-      category = "ApplicationGatewayFirewallLog"
-    }
-  }
+  
 
   ssl_policy {
     policy_type = "Predefined"
@@ -175,6 +161,31 @@ resource "azurerm_application_gateway" "app_gateway" {
     azurerm_linux_virtual_machine.app_server,
     azurerm_storage_account.logs
   ]
+}
+
+resource "azurerm_monitor_diagnostic_setting" "app_gateway_diag" {
+  name                       = "${local.prefix}-app-gateway-logs"
+  target_resource_id        = azurerm_application_gateway.app_gateway.id
+  storage_account_id        = azurerm_storage_account.logs.id
+
+  enabled_log {
+    category_group = "allLogs"
+
+    retention_policy {
+      enabled = true
+      days    = 7
+    }
+  }
+
+  metric {
+    category = "AllMetrics"
+    enabled  = true
+
+    retention_policy {
+      enabled = true
+      days    = 7
+    }
+  }
 }
 
 # DNS Record (similar to Route53)
