@@ -164,27 +164,17 @@ resource "azurerm_application_gateway" "app_gateway" {
 }
 
 resource "azurerm_monitor_diagnostic_setting" "app_gateway_diag" {
-  name                       = "${local.prefix}-app-gateway-logs"
-  target_resource_id        = azurerm_application_gateway.app_gateway.id
-  storage_account_id        = azurerm_storage_account.logs.id
+  name                = "${local.prefix}-app-gateway-logs"
+  target_resource_id  = azurerm_application_gateway.app_gateway.id
+  storage_account_id  = azurerm_storage_account.logs.id
 
   enabled_log {
     category_group = "allLogs"
-
-    retention_policy {
-      enabled = true
-      days    = 7
-    }
   }
 
   metric {
     category = "AllMetrics"
     enabled  = true
-
-    retention_policy {
-      enabled = true
-      days    = 7
-    }
   }
 }
 
@@ -193,6 +183,6 @@ resource "azurerm_dns_cname_record" "app" {
   name                = "app"
   zone_name           = azurerm_dns_zone.oi_portal.name
   resource_group_name = module.networking.resource_group_name
-  ttl                 = 60
-  record              = azurerm_public_ip.agw.fqdn  # or the fully qualified domain name of your application gateway
+  ttl                = 60
+  record             = azurerm_public_ip.agw.ip_address  # Use IP address instead of FQDN
 }
