@@ -116,18 +116,18 @@ resource "azurerm_linux_virtual_machine" "app_server" {
 
   # OS image configuration - RedHat Enterprise Linux
   source_image_reference {
-    publisher = "RedHat"
-    offer     = "RHEL"
-    sku       = "8_6"  # Specify the exact SKU
-    version   = "latest"
-  }
+  publisher = "RedHat"
+  offer     = "RHEL"
+  sku       = "8-lvm-gen2"
+  version   = "latest"
+}
 
   plan {
     name      = "8_6"
     product   = "RHEL"
     publisher = "RedHat"
   }
-  
+
   # Initialize the app server with required software and configuration
   custom_data = base64encode(file("${path.module}/userdata/appserver-init.sh"))
 
