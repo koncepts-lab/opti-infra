@@ -2,9 +2,31 @@
 
 ## Overview
 
-This repository contains the Terraform configuration for deploying a robust, secure, and scalable infrastructure on Microsoft Azure. The infrastructure is designed to provide high availability, strong security, and flexible scalability across multiple environments.
+This repository contains the Terraform configuration for deploying a robust, secure, and scalable infrastructure on Microsoft Azure. The infrastructure is designed to provide high availability, strong security, and flexible scalability across multiple environments. This deployment represents a migration from AWS to Azure, with architectural adjustments to leverage Azure-native capabilities.
 
-## Infrastructure Architecture
+## Migration Changes
+
+### Key Infrastructure Changes
+
+1. **DNS to IP Address Migration**
+   - Moved from AWS DNS-based addressing to Azure IP-based addressing
+   - Jumpbox now uses public IP instead of public DNS
+   - App server uses private IP instead of private DNS
+   - Justification: Better alignment with Azure's networking model and simplified DNS management
+
+2. **Authentication Updates**
+   - Replaced AWS profile-based authentication with Azure subscription and tenant ID
+   - Added explicit admin username variables
+   - Enhanced SSH key management with separate keys for jumpbox and app server
+   - Justification: Compliance with Azure's security model and more granular access control
+
+3. **Resource Configuration**
+   - Added detailed VM size specifications
+   - Introduced OS disk configuration options
+   - Enhanced redundancy validation (1-3 zones)
+   - Justification: Leverage Azure's flexible VM sizing and storage options
+
+### Infrastructure Architecture
 
 ### Network Design
 
@@ -20,7 +42,8 @@ This repository contains the Terraform configuration for deploying a robust, sec
 1. **Compute Resources**
    - Single `app_server` deployed in Availability Zone 1
    - Private IP configuration
-   - Jumpbox for secure administrative access
+   - Jumpbox with configurable size (default: Standard_B1s)
+   - Customizable OS disk size and type
 
 2. **Network Security**
    - 3 NAT Gateways for high availability
@@ -36,7 +59,7 @@ This repository contains the Terraform configuration for deploying a robust, sec
 4. **Security Measures**
    - Azure Key Vault for certificate and secret management
    - Private network architecture
-   - Secure, key-based Jumpbox access
+   - Enhanced key-based Jumpbox access with separate key pairs
 
 ## Prerequisites
 
@@ -46,8 +69,12 @@ This repository contains the Terraform configuration for deploying a robust, sec
 - Active Azure subscription
 
 ### Authentication
-- Azure subscription credentials
-- Configured Azure CLI access
+Required credentials (in secrets.tfvars):
+- `subscription_id`: Azure subscription ID
+- `tenant_id`: Azure tenant ID
+- `jumpbox_admin_username`: Admin username for jumpbox
+- `jumpbox_ssh_key`: SSH public key for jumpbox access
+- `app_server_admin_username`: Admin username for app server
 
 ## Repository Structure
 
@@ -80,7 +107,7 @@ opti-infra/
    cp secrets.tfvars.example secrets.tfvars
    ```
 
-3. Edit `secrets.tfvars` with your specific values:
+3. Edit `secrets.tfvars` with your Azure-specific values:
    ```bash
    nano secrets.tfvars
    ```
@@ -90,9 +117,11 @@ opti-infra/
   - `subscription_id`: Your Azure subscription ID
   - `tenant_id`: Your Azure tenant ID
 
-- **App Server Access**
-  - `app_server_admin_username`: Admin username
-  - `app_server_ssh_key`: SSH public key
+- **VM Access**
+  - `jumpbox_admin_username`: Jumpbox admin username
+  - `jumpbox_ssh_key`: Jumpbox SSH public key
+  - `app_server_admin_username`: App server admin username
+  - `app_server_ssh_key`: App server SSH public key
 
 - **Key Vault Access**
   - `key_vault_object_id`: Key Vault access object ID
@@ -176,20 +205,16 @@ terraform destroy \
 4. Limit SSH access to trusted IP ranges
 5. Monitor Key Vault and storage account logs
 
-## Maintenance Recommendations
 
-- Regularly review NAT Gateway health
-- Monitor storage account capacity
-- Track SSL certificate expiration
-- Audit Application Gateway logs
-- Perform periodic security assessments
+## Azure-Specific Maintenance Recommendations
 
-## Scalability Features
-
-- Reserved subnet space for expansion
-- Distributed NAT Gateway architecture
-- Configurable load balancer backend pool
+- Monitor NAT Gateway allocation and scaling
+- Review Network Security Group rules regularly
+- Track VM performance metrics
+- Monitor public IP address usage
+- Audit Key Vault access logs
+- Regular review of RBAC assignments
 
 ## Support
 
-For infrastructure support or questions, please contact the DevOps team.
+For infrastructure support or questions about the Azure migration, please contact the DevOps team.
