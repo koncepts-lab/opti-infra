@@ -194,7 +194,7 @@ resource "azurerm_dns_cname_record" "app" {
   zone_name           = azurerm_dns_zone.oi_portal.name
   resource_group_name = module.networking.resource_group_name
   ttl                 = 60
-  record             = azurerm_public_ip.agw.fqdn
+  target_resource_id  = azurerm_public_ip.agw.id
 
   tags = {
     Name = "${local.prefix}-app-dns"

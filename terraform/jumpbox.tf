@@ -133,7 +133,7 @@ resource "azurerm_linux_virtual_machine" "jumpbox" {
   # OS image configuration - RedHat Enterprise Linux
   source_image_reference {
     publisher = "RedHat"
-    offer     = "RHEL"
+    offer     = "RHEL-8"
     sku       = "8-gen2"  # RHEL 8
     version   = var.jumpbox_image_version
   }
@@ -141,7 +141,7 @@ resource "azurerm_linux_virtual_machine" "jumpbox" {
   # Required for RHEL plan
   plan {
     name      = "8-gen2"
-    product   = "rhel"
+    product   = "RHEL-8"
     publisher = "RedHat"
   }
 

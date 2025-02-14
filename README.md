@@ -95,7 +95,27 @@ opti-infra/
 
 ## Deployment Instructions
 
-### 1. Prepare Secrets Configuration
+### 1. Set up Azure Storage for Terraform State
+
+First, create the Azure storage account to store Terraform state:
+
+```bash
+# Create resource group for Terraform state
+az group create --name terraform-state-rg --location eastus
+
+# Create storage account
+az storage account create \
+  --name oiitfstatedev \
+  --resource-group terraform-state-rg \
+  --sku Standard_LRS
+
+# Create container for Terraform state
+az storage container create \
+  --name tfstate \
+  --account-name oiitfstatedev
+```
+
+### 2. Prepare Secrets Configuration
 
 1. Navigate to the secrets directory:
    ```bash
@@ -136,8 +156,13 @@ opti-infra/
 # Navigate to terraform directory
 cd terraform
 
-# Initialize Terraform
-terraform init
+#Navigate to the correct directory:
+cd terraform/environments/dev
+
+# Initialize Terraform with backend configuration
+terraform init \
+  -backend-config="environments/dev/backend.tf" \
+  -reconfigure
 ```
 
 ### 3. Select Environment Workspace
@@ -172,19 +197,31 @@ terraform apply \
 
 ```bash
 # Development Environment
-terraform workspace new dev
-terraform workspace select dev
-terraform plan -var-file="environments/dev/terraform.tfvars"
+# Create storage account (if not exists)
+az storage account create --name oiitfstatedev --resource-group terraform-state-rg --sku Standard_LRS
+az storage container create --name tfstate --account-name oiitfstatedev
+
+# Initialize and plan
+terraform init -backend-config="environments/dev/backend.tf" -reconfigure
+terraform plan -var-file="environments/dev/terraform.tfvars" -var-file="secrets/secrets.tfvars"
 
 # Testing Environment
-terraform workspace new test
-terraform workspace select test
-terraform plan -var-file="environments/test/terraform.tfvars"
+# Create storage account (if not exists)
+az storage account create --name oiitfstatetest --resource-group terraform-state-rg --sku Standard_LRS
+az storage container create --name tfstate --account-name oiitfstatetest
+
+# Initialize and plan
+terraform init -backend-config="environments/test/backend.tf" -reconfigure
+terraform plan -var-file="environments/test/terraform.tfvars" -var-file="secrets/secrets.tfvars"
 
 # Production Environment
-terraform workspace new prod
-terraform workspace select prod
-terraform plan -var-file="environments/prod/terraform.tfvars"
+# Create storage account (if not exists)
+az storage account create --name oiitfstateprod --resource-group terraform-state-rg --sku Standard_LRS
+az storage container create --name tfstate --account-name oiitfstateprod
+
+# Initialize and plan
+terraform init -backend-config="environments/prod/backend.tf" -reconfigure
+terraform plan -var-file="environments/prod/terraform.tfvars" -var-file="secrets/secrets.tfvars"
 ```
 
 ## Destroying Infrastructure
