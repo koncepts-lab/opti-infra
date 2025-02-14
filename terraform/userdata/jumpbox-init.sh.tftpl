@@ -1,18 +1,17 @@
-#!/bin/bash
-
 # Update system packages
 dnf update -y
 
 # Install required packages
 dnf install -y inotify-tools
 dnf install -y ansible
+dnf install -y xfsprogs  # Added for XFS support
 
 # Create .ssh directory if it doesn't exist
-mkdir -p /home/jumpboxadmin/.ssh
+mkdir -p /home/${jumpbox_admin_username}/.ssh
 
 # Write SSH private key
-echo "${key_mat}" > /home/jumpboxadmin/.ssh/id_rsa
+echo "${key_mat}" > /home/${jumpbox_admin_username}/.ssh/id_rsa
 
 # Set correct permissions and ownership
-chmod 600 /home/jumpboxadmin/.ssh/id_rsa
-chown -R jumpboxadmin:jumpboxadmin /home/jumpboxadmin/.ssh
+chmod 600 /home/${jumpbox_admin_username}/.ssh/id_rsa
+chown -R ${jumpbox_admin_username}:${jumpbox_admin_username} /home/${jumpbox_admin_username}/.ssh
