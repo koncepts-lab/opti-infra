@@ -194,9 +194,5 @@ resource "azurerm_dns_cname_record" "app" {
   zone_name           = azurerm_dns_zone.oi_portal.name
   resource_group_name = module.networking.resource_group_name
   ttl                 = 60
-  target_resource_id  = azurerm_public_ip.agw.id
-
-  tags = {
-    Name = "${local.prefix}-app-dns"
-  }
+  record              = azurerm_public_ip.agw.fqdn  # or the fully qualified domain name of your application gateway
 }
