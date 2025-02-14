@@ -8,7 +8,7 @@ locals {
   
   # Calculate subnet bits
   total_subnets     = 2 * local.az_count  # VM and NAT subnet per zone
-  new_bits          = ceil(log(local.total_subnets, 2))
+  new_bits          = ceil(log(2 * local.total_subnets, 2))
 }
 
 # Create a resource group
@@ -40,7 +40,7 @@ resource "azurerm_subnet" "subnet_with_vm" {
   name                 = "${var.prefix}-${var.env}-vm-sn-${each.value}"
   resource_group_name  = azurerm_resource_group.main.name
   virtual_network_name = azurerm_virtual_network.mainvnet.name
-  address_prefixes     = [cidrsubnet(local.base_cidr, local.new_bits, parseint(each.key, 10))]
+  address_prefixes     = [cidrsubnet(local.base_cidr, local.new_bits, local.az_count + parseint(each.value, 10) - 1)]
   service_endpoints    = ["Microsoft.Storage"]
 }
 

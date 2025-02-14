@@ -16,10 +16,11 @@ resource "azurerm_dns_zone" "oi_portal" {
 # Import existing DNS zone
 # AWS: Used Route53 zone ID directly
 # Azure: Uses full resource path including subscription and resource group
-import {
-  to = azurerm_dns_zone.oi_portal
-  id = "/subscriptions/${var.subscription_id}/resourceGroups/${module.networking.resource_group_name}/providers/Microsoft.Network/dnszones/oi-portal.com"
-}
+#import {
+#  to = azurerm_dns_zone.oi_portal
+#  id = "/subscriptions/${var.subscription_id}/resourceGroups/${module.networking.resource_group_name}/providers/Microsoft.Network/dnsZones/oi-portal.com"
+#}
+
 
 # Generate SSL Certificate
 # AWS: Used ACM (aws_acm_certificate)
