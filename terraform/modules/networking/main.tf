@@ -171,6 +171,18 @@ resource "azurerm_network_security_group" "vm_subnet_nsg" {
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
 
+  security_rule {
+    name                       = "AllowAppGatewayHealthProbes"
+    priority                   = 200  # Ensure it's a unique priority
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "65200-65535"
+    source_address_prefix      = "GatewayManager"
+    destination_address_prefix = "*"
+  }
+  
   # Allow inbound from App Gateway
   security_rule {
     name                       = "AllowAppGatewayInbound"

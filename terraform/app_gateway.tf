@@ -37,6 +37,11 @@ resource "azurerm_application_gateway" "app_gateway" {
   resource_group_name = module.networking.resource_group_name
   location            = module.networking.resource_group_location
 
+  identity {
+    type         = "UserAssigned"
+    identity_ids = [azurerm_user_assigned_identity.app_gateway_identity.id]
+  }
+
   sku {
     name     = "WAF_v2"
     tier     = "WAF_v2"
@@ -186,3 +191,16 @@ resource "azurerm_dns_cname_record" "app" {
   ttl                = 60
   record             = azurerm_public_ip.agw.ip_address  # Use IP address instead of FQDN
 }
+
+resource "azurerm_user_assigned_identity" "app_gateway_identity" {
+  name                = "${local.prefix}-app-gateway-identity"
+  resource_group_name = module.networking.resource_group_name
+  location            = module.networking.resource_group_location
+
+  tags = {
+    Name = "${local.prefix}-app-gateway-identity"
+  }
+}
+
+
+

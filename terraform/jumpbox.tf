@@ -127,22 +127,17 @@ resource "azurerm_linux_virtual_machine" "jumpbox" {
     name                 = "${local.prefix}-jumpbox-root-disk"
     caching              = "ReadWrite"
     storage_account_type = var.jumpbox_os_disk_type
-    disk_size_gb         = var.jumpbox_os_disk_size
+    #disk_size_gb         = var.jumpbox_os_disk_size
+    disk_size_gb         = 64
   }
 
   # OS image configuration - RedHat Enterprise Linux
-  source_image_reference {
+source_image_reference {
   publisher = "RedHat"
   offer     = "RHEL"
-  sku       = "9_5-lvm-gen2"
+  sku       = "95_gen2"  # Changed from "9_5-lvm-gen2"
   version   = "latest"
 }
-
-  plan {
-    name      = "8_6"
-    product   = "RHEL"
-    publisher = "RedHat"
-  }
 
   # Initialize the jumpbox with required software and configuration
   custom_data = base64encode(templatefile("${path.module}/userdata/jumpbox-init.sh.tftpl", {

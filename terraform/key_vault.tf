@@ -45,3 +45,40 @@ resource "azurerm_key_vault" "vault" {
 
 # Get the current Azure CLI credentials
 data "azurerm_client_config" "current" {}
+
+resource "azurerm_key_vault_access_policy" "current_user" {
+  key_vault_id = azurerm_key_vault.vault.id
+  tenant_id    = data.azurerm_client_config.current.tenant_id
+  object_id    = data.azurerm_client_config.current.object_id
+
+  certificate_permissions = [
+    "Get", "List", "Create", "Delete", "Update", "Import", 
+    "Recover", "Backup", "Restore", "ManageContacts", 
+    "ManageIssuers", "GetIssuers", "ListIssuers", 
+    "SetIssuers", "DeleteIssuers"
+  ]
+
+  key_permissions = [
+    "Get", "List", "Create", "Delete", "Update", 
+    "Import", "Recover", "Backup", "Restore"
+  ]
+
+  secret_permissions = [
+    "Get", "List", "Set", "Delete", "Recover", 
+    "Backup", "Restore"
+  ]
+}
+
+resource "azurerm_key_vault_access_policy" "app_gateway_identity_policy" {
+  key_vault_id = azurerm_key_vault.vault.id
+  tenant_id    = data.azurerm_client_config.current.tenant_id
+  object_id    = azurerm_user_assigned_identity.app_gateway_identity.principal_id
+
+  certificate_permissions = [
+    "Get", "List"
+  ]
+
+  secret_permissions = [
+    "Get", "List"
+  ]
+}

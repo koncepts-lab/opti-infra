@@ -81,7 +81,7 @@ variable "jumpbox_ssh_key" {
 variable "jumpbox_os_disk_size" {
   type        = number
   description = "The size of the jumpbox OS disk in GB"
-  default     = 25
+  default     = 64
 }
 
 variable "jumpbox_os_disk_type" {
@@ -134,7 +134,7 @@ variable "app_server_ssh_key" {
 variable "app_server_os_disk_size" {
   type        = number
   description = "Size of the app server OS disk in GB"
-  default     = 50
+  default     = 64
 }
 
 variable "app_server_data_disk_size" {

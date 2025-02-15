@@ -80,7 +80,7 @@ resource "azurerm_linux_virtual_machine" "app_server" {
   name                = "${local.prefix}-appserver"
   resource_group_name = module.networking.resource_group_name
   location            = module.networking.resource_group_location
-  size                = "Standard_D8ps_v5"  # ARM-based VM
+  size                = "Standard_D8s_v3"  # ARM-based VM
   admin_username      = var.app_server_admin_username
 
   # Configure both provided (external) and internal SSH keys
@@ -111,23 +111,16 @@ resource "azurerm_linux_virtual_machine" "app_server" {
     name                 = "${local.prefix}-appserver-os-disk"
     caching              = "ReadWrite"
     storage_account_type = "Premium_LRS"  # Premium SSD for better performance
-    disk_size_gb         = 50
+    disk_size_gb         = 64
   }
 
   # OS image configuration - RedHat Enterprise Linux
-  source_image_reference {
+source_image_reference {
   publisher = "RedHat"
   offer     = "RHEL"
-  sku       = "9_5-lvm-gen2"
+  sku       = "95_gen2"  # Changed from "9_5-lvm-gen2"
   version   = "latest"
 }
-
-
-  plan {
-    name      = "8_6"
-    product   = "RHEL"
-    publisher = "RedHat"
-  }
 
   # Initialize the app server with required software and configuration
   custom_data = base64encode(file("${path.module}/userdata/appserver-init.sh"))
