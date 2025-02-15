@@ -93,10 +93,21 @@ resource "azurerm_key_vault_access_policy" "current_user" {
   object_id    = data.azurerm_client_config.current.object_id
 
   certificate_permissions = [
-    "Get", "List", "Create", "Delete", "Update", "Import", 
-    "Recover", "Backup", "Restore", "ManageContacts", 
-    "ManageIssuers", "GetIssuers", "ListIssuers", 
-    "SetIssuers", "DeleteIssuers"
+    "Get",
+    "List",
+    "Create", 
+    "Delete",
+    "Update",
+    "Import",
+    "ManageContacts",
+    "ManageIssuers",
+    "GetIssuers",
+    "ListIssuers",
+    "SetIssuers",
+    "DeleteIssuers",
+    "Backup",
+    "Restore",
+    "Recover"
   ]
 
   key_permissions = [
@@ -107,6 +118,42 @@ resource "azurerm_key_vault_access_policy" "current_user" {
   secret_permissions = [
     "Get", "List", "Set", "Delete", "Recover", 
     "Backup", "Restore"
+  ]
+}
+
+resource "azurerm_key_vault_access_policy" "terraform_access" {
+  key_vault_id = azurerm_key_vault.vault.id
+  tenant_id    = data.azurerm_client_config.current.tenant_id
+  object_id    = var.key_vault_object_id  # Using the variable from secrets.tfvars
+
+  certificate_permissions = [
+    "Get",
+    "List",
+    "Create", 
+    "Delete",
+    "Update",
+    "Import",
+    "ManageContacts",
+    "ManageIssuers",
+    "GetIssuers",
+    "ListIssuers",
+    "SetIssuers",
+    "DeleteIssuers"
+  ]
+
+  key_permissions = [
+    "Get",
+    "List",
+    "Create",
+    "Delete",
+    "Update"
+  ]
+
+  secret_permissions = [
+    "Get",
+    "List",
+    "Set",
+    "Delete"
   ]
 }
 

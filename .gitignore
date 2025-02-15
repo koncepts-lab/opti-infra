@@ -9,6 +9,7 @@ secrets.tfvars
 *.pem
 *.key
 *.pub
+playbooks
 
 # IDE files
 .idea/
