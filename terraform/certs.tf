@@ -29,6 +29,12 @@ resource "azurerm_key_vault_certificate" "oi_portal_cert" {
   name         = "${local.prefix}-oi-portal-cert"
   key_vault_id = azurerm_key_vault.vault.id
 
+
+  depends_on = [
+    azurerm_key_vault_access_policy.current_user,
+    azurerm_key_vault.vault
+  ]
+
   certificate_policy {
     # Issuer configuration - Self-signed in this case
     # In AWS, this was handled automatically by ACM
@@ -113,6 +119,11 @@ resource "azurerm_dns_txt_record" "cert_validation" {
 resource "azurerm_key_vault_certificate" "app_gateway_cert" {
   name         = "${local.prefix}-app-gateway-cert"
   key_vault_id = azurerm_key_vault.vault.id
+
+  depends_on = [
+    azurerm_key_vault_access_policy.current_user,
+    azurerm_key_vault.vault
+  ]
 
   certificate_policy {
     issuer_parameters {

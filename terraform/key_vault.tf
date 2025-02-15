@@ -15,12 +15,53 @@ resource "azurerm_key_vault" "vault" {
     tenant_id = data.azurerm_client_config.current.tenant_id
     object_id = data.azurerm_client_config.current.object_id
 
+    certificate_permissions = [
+      "Backup",
+      "Create",
+      "Delete",
+      "DeleteIssuers",
+      "Get",
+      "GetIssuers",
+      "Import",
+      "List",
+      "ListIssuers",
+      "ManageContacts",
+      "ManageIssuers",
+      "Purge",
+      "Recover",
+      "Restore",
+      "SetIssuers",
+      "Update"
+    ]
+
     key_permissions = [
-      "Get", "List", "Create", "Delete", "Update",
+      "Backup",
+      "Create",
+      "Decrypt",
+      "Delete",
+      "Encrypt",
+      "Get",
+      "Import",
+      "List",
+      "Purge",
+      "Recover",
+      "Restore",
+      "Sign",
+      "UnwrapKey",
+      "Update",
+      "Verify",
+      "WrapKey"
     ]
 
     secret_permissions = [
-      "Get", "List", "Set", "Delete",
+      "Backup",
+      "Delete",
+      "Get",
+      "List",
+      "Purge",
+      "Recover",
+      "Restore",
+      "Set"
     ]
   }
 
@@ -80,5 +121,21 @@ resource "azurerm_key_vault_access_policy" "app_gateway_identity_policy" {
 
   secret_permissions = [
     "Get", "List"
+  ]
+}
+
+resource "azurerm_key_vault_access_policy" "app_gateway_policy" {
+  key_vault_id = azurerm_key_vault.vault.id
+  tenant_id    = data.azurerm_client_config.current.tenant_id
+  object_id    = azurerm_user_assigned_identity.app_gateway_identity.principal_id
+
+  certificate_permissions = [
+    "Get",
+    "List"
+  ]
+
+  secret_permissions = [
+    "Get",
+    "List"
   ]
 }

@@ -127,8 +127,7 @@ resource "azurerm_linux_virtual_machine" "jumpbox" {
     name                 = "${local.prefix}-jumpbox-root-disk"
     caching              = "ReadWrite"
     storage_account_type = var.jumpbox_os_disk_type
-    #disk_size_gb         = var.jumpbox_os_disk_size
-    disk_size_gb         = 64
+    disk_size_gb         = var.jumpbox_os_disk_size
   }
 
   # OS image configuration - RedHat Enterprise Linux
