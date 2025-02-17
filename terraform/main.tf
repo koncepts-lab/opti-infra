@@ -96,7 +96,11 @@ module "networking" {
   app_gateway_capacity   = var.app_gateway_capacity
 }
 
+# =============================================================================
 # Application Gateway subnet
+# =============================================================================
+
+# Application Gateway subnet has to be separate as per azure
 resource "azurerm_subnet" "subnet_appgw" {
   name                 = "${var.prefix}-${var.env}-appgw-subnet"
   resource_group_name  = azurerm_resource_group.main.name
