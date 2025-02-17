@@ -17,14 +17,15 @@ output "jumpbox_private_ip" {
 
 # Application Gateway subnet output
 output "appgw_subnet_id" {
-  value       = azurerm_subnet.subnet_appgw.id
-  description = "The ID of the Application Gateway subnet"
+  value       = module.networking.appgw_subnet_id
+  description = "The ID of the Application Gateway Subnet"
 }
 
 output "appgw_subnet" {
-  value       = azurerm_subnet.subnet_appgw
-  description = "The complete Application Gateway subnet resource"
+  value       = module.networking.appgw_subnet
+  description = "The Application Gateway Subnet"
 }
+
 
 resource "local_file" "ansible_inventory" {
   filename = "${path.module}/inventory.ini"
