@@ -91,6 +91,7 @@ module "networking" {
   appdata_replication_type = var.appdata_replication_type
 
   # Application Gateway Configuration
+  appgw_subnet_prefix    = var.appgw_subnet_prefix
   app_gateway_sku_name   = var.app_gateway_sku_name
   app_gateway_sku_tier   = var.app_gateway_sku_tier
   app_gateway_capacity   = var.app_gateway_capacity

@@ -61,6 +61,11 @@ variable "nat_subnet_prefix" {
   description = "Subnet prefix for NAT subnet"
 }
 
+variable "appgw_subnet_prefix" {
+  type        = string
+  description = "Subnet prefix for Application Gateway subnet"
+}
+
 # Jumpbox Configuration
 variable "jumpbox_size" {
   type        = string
