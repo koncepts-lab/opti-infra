@@ -8,7 +8,7 @@ product              = "oii"
 redundancy           = 2
 
 # Network Configuration
-address_space        = ["10.0.0.0/16"]
+address_space        = ["10.0.0.0/16"]  # Base CIDR for the entire VNet
 vm_subnet_prefix     = "10.0.1.0/24"
 nat_subnet_prefix    = "10.0.2.0/24"
 

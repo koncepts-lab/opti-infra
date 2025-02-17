@@ -1,14 +1,25 @@
 locals {
-  base_cidr = "10.0.0.0/16"
-  prefix    = var.prefix
+  # Use the provided address space
+  base_cidr = var.address_space[0]  # e.g., "10.0.0.0/16"
   
   # Calculate zones based on redundancy
-  az_count          = var.redundancy
+  az_count           = var.redundancy
   availability_zones = slice(["1", "2", "3"], 0, var.redundancy)
   
-  # Calculate subnet bits
-  total_subnets     = (2 * local.az_count) + 1  # VM and NAT subnet per zone + 1 App Gateway subnet
-  new_bits          = ceil(log(2 * local.total_subnets, 2))
+  # CIDR calculations
+  # Using /20 subnets to give each subnet 4096 IPs
+  vm_subnet_ranges = {
+    for idx, zone in local.availability_zones :
+    zone => cidrsubnet(local.base_cidr, 4, parseint(idx, 10))  # Start at 10.0.0.0/20, 10.0.16.0/20, etc.
+  }
+  
+  nat_subnet_ranges = {
+    for idx, zone in local.availability_zones :
+    zone => cidrsubnet(local.base_cidr, 4, local.az_count + parseint(idx, 10))  # Start after VM subnets
+  }
+  
+  # AppGW gets its own subnet after all other subnets
+  appgw_subnet_range = cidrsubnet(local.base_cidr, 4, 2 * local.az_count)  # Place after all zone-based subnets
 }
 
 # Create a resource group
@@ -40,7 +51,7 @@ resource "azurerm_subnet" "subnet_with_vm" {
   name                 = "${var.prefix}-${var.env}-vm-sn-${each.value}"
   resource_group_name  = azurerm_resource_group.main.name
   virtual_network_name = azurerm_virtual_network.mainvnet.name
-  address_prefixes     = [cidrsubnet(local.base_cidr, local.new_bits, 2 * (parseint(each.value, 10) - 1))]
+  address_prefixes     = [local.vm_subnet_ranges[each.value]]
   service_endpoints    = ["Microsoft.Storage"]
 }
 
@@ -50,7 +61,7 @@ resource "azurerm_subnet" "subnet_with_nat" {
   name                 = "${var.prefix}-${var.env}-nat-sn-${each.value}"
   resource_group_name  = azurerm_resource_group.main.name
   virtual_network_name = azurerm_virtual_network.mainvnet.name
-  address_prefixes     = [cidrsubnet(local.base_cidr, local.new_bits, 2 * (parseint(each.value, 10) - 1) + 1)]
+  address_prefixes     = [local.nat_subnet_ranges[each.value]]
   service_endpoints    = ["Microsoft.Storage"]
 }
 
@@ -167,12 +178,10 @@ resource "azurerm_network_security_group" "vnet_nsg" {
 # Application Gateway subnet
 # Dedicated subnet required for Application Gateway as per Azure requirements
 resource "azurerm_subnet" "subnet_appgw" {
-  name                = "${var.prefix}-${var.env}-appgw-subnet"
-  resource_group_name = azurerm_resource_group.main.name
+  name                 = "${var.prefix}-${var.env}-appgw-subnet"
+  resource_group_name  = azurerm_resource_group.main.name
   virtual_network_name = azurerm_virtual_network.mainvnet.name
-  # Use a distinct CIDR range for App Gateway subnet
-  address_prefixes    = [var.appgw_subnet_prefix]
-  # Service endpoints for enhanced security
+  address_prefixes     = [local.appgw_subnet_range]
   service_endpoints    = ["Microsoft.Storage"]
 }
 

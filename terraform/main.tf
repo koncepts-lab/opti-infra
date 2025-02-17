@@ -98,19 +98,6 @@ module "networking" {
 }
 
 # =============================================================================
-# Application Gateway subnet
-# =============================================================================
-
-# Application Gateway subnet has to be separate as per azure
-resource "azurerm_subnet" "subnet_appgw" {
-  name                 = "${var.prefix}-${var.env}-appgw-subnet"
-  resource_group_name  = module.networking.resource_group_name
-  virtual_network_name = module.networking.vpc_id  
-  address_prefixes     = [var.appgw_subnet_prefix]
-}
-
-
-# =============================================================================
 # Optional Terraform State Storage (if using local backend)
 # =============================================================================
 
