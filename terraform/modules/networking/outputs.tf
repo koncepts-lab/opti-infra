@@ -17,6 +17,11 @@ output "resource_group_name" {
   description = "The resource group name of the resource group being created by this module"
 }
 
+output "appgw_subnet_id" {
+  value       = azurerm_subnet.subnet_appgw.id
+  description = "The ID of the Application Gateway subnet"
+}
+
 # Virtual Network ID - Equivalent to AWS VPC ID
 # Maintained for consistent network resource referencing across cloud providers
 output "vpc_id" {

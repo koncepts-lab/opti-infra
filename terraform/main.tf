@@ -96,6 +96,14 @@ module "networking" {
   app_gateway_capacity   = var.app_gateway_capacity
 }
 
+# Application Gateway subnet
+resource "azurerm_subnet" "subnet_appgw" {
+  name                 = "${var.prefix}-${var.env}-appgw-subnet"
+  resource_group_name  = azurerm_resource_group.main.name
+  virtual_network_name = azurerm_virtual_network.mainvnet.name
+  address_prefixes     = [cidrsubnet(local.base_cidr, local.new_bits, local.total_subnets)]  # Use next available subnet range
+}
+
 # =============================================================================
 # Optional Terraform State Storage (if using local backend)
 # =============================================================================

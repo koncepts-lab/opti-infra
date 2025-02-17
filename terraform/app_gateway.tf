@@ -50,7 +50,7 @@ resource "azurerm_application_gateway" "app_gateway" {
 
   gateway_ip_configuration {
     name      = "gateway-ip-config"
-    subnet_id = module.networking.vm_subnet_id["1"]
+    subnet_id = module.networking.appgw_subnet_id 
   }
 
   frontend_port {
