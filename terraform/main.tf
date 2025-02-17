@@ -104,10 +104,11 @@ module "networking" {
 # Application Gateway subnet has to be separate as per azure
 resource "azurerm_subnet" "subnet_appgw" {
   name                 = "${var.prefix}-${var.env}-appgw-subnet"
-  resource_group_name  = azurerm_resource_group.main.name
-  virtual_network_name = azurerm_virtual_network.mainvnet.name
-  address_prefixes     = [cidrsubnet(local.base_cidr, local.new_bits, local.total_subnets)]  # Use next available subnet range
+  resource_group_name  = module.networking.resource_group_name
+  virtual_network_name = module.networking.vpc_id  
+  address_prefixes     = [var.appgw_subnet_prefix]
 }
+
 
 # =============================================================================
 # Optional Terraform State Storage (if using local backend)

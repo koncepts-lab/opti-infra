@@ -7,7 +7,7 @@ locals {
   availability_zones = slice(["1", "2", "3"], 0, var.redundancy)
   
   # Calculate subnet bits
-  total_subnets     = 2 * local.az_count  # VM and NAT subnet per zone
+  total_subnets     = (2 * local.az_count) + 1  # VM and NAT subnet per zone + 1 App Gateway subnet
   new_bits          = ceil(log(2 * local.total_subnets, 2))
 }
 
@@ -162,6 +162,115 @@ resource "azurerm_network_security_group" "vnet_nsg" {
     terraform = "true"
     env      = var.env
   }
+}
+
+# Application Gateway subnet
+# Dedicated subnet required for Application Gateway as per Azure requirements
+resource "azurerm_subnet" "subnet_appgw" {
+  name                = "${var.prefix}-${var.env}-appgw-subnet"
+  resource_group_name = azurerm_resource_group.main.name
+  virtual_network_name = azurerm_virtual_network.mainvnet.name
+  # Use a distinct CIDR range for App Gateway subnet
+  address_prefixes    = [var.appgw_subnet_prefix]
+  # Service endpoints for enhanced security
+  service_endpoints    = ["Microsoft.Storage"]
+}
+
+# Application Gateway NSG
+# Network Security Group specifically for Application Gateway subnet
+resource "azurerm_network_security_group" "appgw_subnet_nsg" {
+  name                = "${var.prefix}-${var.env}-appgw-subnet-nsg"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+
+  # Allow HTTPS inbound for secure traffic
+  security_rule {
+    name                       = "AllowHTTPS"
+    priority                   = 100
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range         = "*"
+    destination_port_range    = "443"
+    source_address_prefix     = "*"
+    destination_address_prefix = "*"
+  }
+
+  # Allow HTTP inbound for initial traffic (will be redirected to HTTPS)
+  security_rule {
+    name                       = "AllowHTTP"
+    priority                   = 110
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range         = "*"
+    destination_port_range    = "80"
+    source_address_prefix     = "*"
+    destination_address_prefix = "*"
+  }
+
+  # Allow Azure Gateway Manager access for health probes and management
+  security_rule {
+    name                       = "AllowGatewayManager"
+    priority                   = 120
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range         = "*"
+    destination_port_range    = "65200-65535"
+    source_address_prefix     = "GatewayManager"
+    destination_address_prefix = "*"
+  }
+
+  # Allow Azure Load Balancer inbound
+  security_rule {
+    name                       = "AllowAzureLoadBalancer"
+    priority                   = 130
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "*"
+    source_port_range         = "*"
+    destination_port_range    = "*"
+    source_address_prefix     = "AzureLoadBalancer"
+    destination_address_prefix = "*"
+  }
+
+  # Allow VNet inbound communication
+  security_rule {
+    name                       = "AllowVnetInbound"
+    priority                   = 140
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "*"
+    source_port_range         = "*"
+    destination_port_range    = "*"
+    source_address_prefix     = "VirtualNetwork"
+    destination_address_prefix = "VirtualNetwork"
+  }
+
+  # Deny all other inbound traffic
+  security_rule {
+    name                       = "DenyAllInbound"
+    priority                   = 4096
+    direction                  = "Inbound"
+    access                     = "Deny"
+    protocol                   = "*"
+    source_port_range         = "*"
+    destination_port_range    = "*"
+    source_address_prefix     = "*"
+    destination_address_prefix = "*"
+  }
+
+  tags = {
+    terraform = "true"
+    env      = var.env
+  }
+}
+
+# Associate NSG with Application Gateway subnet
+resource "azurerm_subnet_network_security_group_association" "appgw_subnet_nsg_assoc" {
+  subnet_id                 = azurerm_subnet.subnet_appgw.id
+  network_security_group_id = azurerm_network_security_group.appgw_subnet_nsg.id
 }
 
 # Subnet-specific NSGs
