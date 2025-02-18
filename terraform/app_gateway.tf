@@ -193,6 +193,14 @@ resource "azurerm_dns_cname_record" "app" {
   record             = azurerm_public_ip.agw.ip_address  # Use IP address instead of FQDN
 }
 
+resource "azurerm_dns_a_record" "apex" {
+  name                = "@"  # @ represents the apex domain
+  zone_name           = azurerm_dns_zone.oi_portal.name
+  resource_group_name = module.networking.resource_group_name
+  ttl                 = 60
+  records             = [azurerm_public_ip.agw.ip_address]
+}
+
 resource "azurerm_user_assigned_identity" "app_gateway_identity" {
   name                = "${local.prefix}-app-gateway-identity"
   resource_group_name = module.networking.resource_group_name
