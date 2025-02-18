@@ -49,3 +49,8 @@ output "backup_storage_name" {
   description = "Name of the backup storage account"
 }
 
+output "application_gateway_ip" {
+  value       = azurerm_public_ip.agw.ip_address
+  description = "Public IP address of the Application Gateway"
+}
+
