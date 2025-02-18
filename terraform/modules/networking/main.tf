@@ -14,20 +14,20 @@ locals {
   appgw_subnet_index = 32       # AppGW subnet at 10.0.32.0/24
   
   # CIDR calculations
-  # Using /20 subnets to give each subnet 4096 IPs
-  # For CIDR calculations with fixed offsets and /24 mask (8 bits for subnet instead 4 that is used now)
+  # Using /24 subnets to give each subnet 4096 IPs
+  # For CIDR calculations with fixed offsets and /20 mask (4 bits for subnet instead 8 that is used now)
   vm_subnet_ranges = {
     for idx, zone in local.availability_zones :
-    zone => cidrsubnet(local.base_cidr, 4, local.vm_subnet_start_index + idx)
+    zone => cidrsubnet(local.base_cidr, 8, local.vm_subnet_start_index + idx)
   }
   
   nat_subnet_ranges = {
     for idx, zone in local.availability_zones :
-    zone => cidrsubnet(local.base_cidr, 4, local.nat_subnet_start_index + idx)
+    zone => cidrsubnet(local.base_cidr, 8, local.nat_subnet_start_index + idx)
   }
   
-  # AppGW gets its own subnet with fixed index (8 instead of 4 if /24 instead of /20)
-  appgw_subnet_range = cidrsubnet(local.base_cidr, 4, local.appgw_subnet_index)
+  # AppGW gets its own subnet with fixed index (4 instead of 8 if /20 instead of /24)
+  appgw_subnet_range = cidrsubnet(local.base_cidr, 8, local.appgw_subnet_index)
 }
 
 # Create a resource group
