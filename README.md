@@ -148,7 +148,9 @@ az storage container create \
   --account-name oiitfstatedev
 ```
 
-### 2. Prepare Secrets Configuration
+### 2. Prepare Configuration Files
+
+#### Secrets Configuration
 
 1. Navigate to the secrets directory:
    ```bash
@@ -164,6 +166,32 @@ az storage container create \
    ```bash
    nano secrets.tfvars
    ```
+
+#### Environment-Specific Configuration
+
+1. Navigate to the appropriate environment directory:
+   ```bash
+   cd terraform/environments/dev  # or test/prod as needed
+   ```
+
+2. Create your environment variables file from the example:
+   ```bash
+   cp terraform.tfvars.example terraform.tfvars
+   ```
+
+3. Review and modify the terraform.tfvars file to match your requirements:
+   ```bash
+   nano terraform.tfvars
+   ```
+
+Key settings to review:
+- `redundancy`: Number of availability zones (1-3)
+- `address_space`: Base CIDR for your virtual network
+- VM and jumpbox sizes
+- Storage configuration
+- Network configuration including subnet prefixes
+
+**Important**: Make sure the subnet prefixes are properly configured to avoid overlaps, especially when changing redundancy levels.
 
 ### 3. Initialize Terraform
 
