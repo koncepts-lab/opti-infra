@@ -53,11 +53,10 @@ resource "azurerm_network_interface" "app_server_nic" {
   resource_group_name = module.networking.resource_group_name
 
   ip_configuration {
-  name                          = "internal"
-  subnet_id                     = module.networking.vm_subnet_id["1"]  # Using first AZ
-  private_ip_address_allocation = "Static"
-  private_ip_address           = "10.0.0.4"  # Use the current IP to maintain consistency
-}
+    name                          = "internal"
+    subnet_id                     = module.networking.vm_subnet_id["1"]  # Using first AZ
+    private_ip_address_allocation = "Dynamic"
+  }
 
   tags = {
     Name = "${local.prefix}-appserver-nic"
