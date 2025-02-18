@@ -1330,22 +1330,10 @@ module "networking" {
   appdata_replication_type = var.appdata_replication_type
 
   # Application Gateway Configuration
-  appgw_subnet_prefix    = var.appgw_subnet_prefix
+  appgw_subnet_range = cidrsubnet(local.base_cidr, 4, 2 * local.az_count)
   app_gateway_sku_name   = var.app_gateway_sku_name
   app_gateway_sku_tier   = var.app_gateway_sku_tier
   app_gateway_capacity   = var.app_gateway_capacity
-}
-
-# =============================================================================
-# Application Gateway subnet
-# =============================================================================
-
-# Application Gateway subnet has to be separate as per azure
-resource "azurerm_subnet" "subnet_appgw" {
-  name                 = "${var.prefix}-${var.env}-appgw-subnet"
-  resource_group_name  = azurerm_resource_group.main.name
-  virtual_network_name = azurerm_virtual_network.mainvnet.name
-  address_prefixes     = [cidrsubnet(local.base_cidr, local.new_bits, local.total_subnets)]  # Use next available subnet range
 }
 
 # =============================================================================
@@ -1404,14 +1392,15 @@ output "jumpbox_private_ip" {
 
 # Application Gateway subnet output
 output "appgw_subnet_id" {
-  value       = azurerm_subnet.subnet_appgw.id
-  description = "The ID of the Application Gateway subnet"
+  value       = module.networking.appgw_subnet_id
+  description = "The ID of the Application Gateway Subnet"
 }
 
 output "appgw_subnet" {
-  value       = azurerm_subnet.subnet_appgw
-  description = "The complete Application Gateway subnet resource"
+  value       = module.networking.appgw_subnet
+  description = "The Application Gateway Subnet"
 }
+
 
 resource "local_file" "ansible_inventory" {
   filename = "${path.module}/inventory.ini"
@@ -1496,16 +1485,19 @@ variable "address_space" {
 variable "vm_subnet_prefix" {
   type        = string
   description = "Subnet prefix for VM subnet"
+  default     = "10.0.1.0/24"
 }
 
 variable "nat_subnet_prefix" {
   type        = string
   description = "Subnet prefix for NAT subnet"
+  default     = "10.0.2.0/24"
 }
 
 variable "appgw_subnet_prefix" {
   type        = string
   description = "Subnet prefix for Application Gateway subnet"
+  default     = "10.0.3.0/24"
 }
 
 # Jumpbox Configuration
@@ -1714,7 +1706,7 @@ product              = "oii"
 redundancy           = 2
 
 # Network Configuration
-address_space        = ["10.0.0.0/16"]
+address_space        = ["10.0.0.0/16"]  # Base CIDR for the entire VNet
 vm_subnet_prefix     = "10.0.1.0/24"
 nat_subnet_prefix    = "10.0.2.0/24"
 
@@ -1845,16 +1837,27 @@ appdata_replication_type   = "LRS"
 terraform/modules/networking/main.tf
 
 locals {
-  base_cidr = "10.0.0.0/16"
-  prefix    = var.prefix
+  # Use the provided address space
+  base_cidr = var.address_space[0]  # e.g., "10.0.0.0/16"
   
   # Calculate zones based on redundancy
-  az_count          = var.redundancy
+  az_count           = var.redundancy
   availability_zones = slice(["1", "2", "3"], 0, var.redundancy)
   
-  # Calculate subnet bits
-  total_subnets     = (2 * local.az_count) + 1  # VM and NAT subnet per zone + 1 App Gateway subnet
-  new_bits          = ceil(log(2 * local.total_subnets, 2))
+  # CIDR calculations
+  # Using /20 subnets to give each subnet 4096 IPs
+  vm_subnet_ranges = {
+    for idx, zone in local.availability_zones :
+    zone => cidrsubnet(local.base_cidr, 4, parseint(idx, 10))  # Start at 10.0.0.0/20, 10.0.16.0/20, etc.
+  }
+  
+  nat_subnet_ranges = {
+    for idx, zone in local.availability_zones :
+    zone => cidrsubnet(local.base_cidr, 4, local.az_count + parseint(idx, 10))  # Start after VM subnets
+  }
+  
+  # AppGW gets its own subnet after all other subnets
+  appgw_subnet_range = cidrsubnet(local.base_cidr, 4, 2 * local.az_count)  # Place after all zone-based subnets
 }
 
 # Create a resource group
@@ -1886,7 +1889,7 @@ resource "azurerm_subnet" "subnet_with_vm" {
   name                 = "${var.prefix}-${var.env}-vm-sn-${each.value}"
   resource_group_name  = azurerm_resource_group.main.name
   virtual_network_name = azurerm_virtual_network.mainvnet.name
-  address_prefixes     = [cidrsubnet(local.base_cidr, local.new_bits, 2 * (parseint(each.value, 10) - 1))]
+  address_prefixes     = [local.vm_subnet_ranges[each.value]]
   service_endpoints    = ["Microsoft.Storage"]
 }
 
@@ -1896,7 +1899,7 @@ resource "azurerm_subnet" "subnet_with_nat" {
   name                 = "${var.prefix}-${var.env}-nat-sn-${each.value}"
   resource_group_name  = azurerm_resource_group.main.name
   virtual_network_name = azurerm_virtual_network.mainvnet.name
-  address_prefixes     = [cidrsubnet(local.base_cidr, local.new_bits, 2 * (parseint(each.value, 10) - 1) + 1)]
+  address_prefixes     = [local.nat_subnet_ranges[each.value]]
   service_endpoints    = ["Microsoft.Storage"]
 }
 
@@ -2013,12 +2016,10 @@ resource "azurerm_network_security_group" "vnet_nsg" {
 # Application Gateway subnet
 # Dedicated subnet required for Application Gateway as per Azure requirements
 resource "azurerm_subnet" "subnet_appgw" {
-  name                = "${var.prefix}-${var.env}-appgw-subnet"
-  resource_group_name = azurerm_resource_group.main.name
+  name                 = "${var.prefix}-${var.env}-appgw-subnet"
+  resource_group_name  = azurerm_resource_group.main.name
   virtual_network_name = azurerm_virtual_network.mainvnet.name
-  # Use a distinct CIDR range for App Gateway subnet
-  address_prefixes    = [var.appgw_subnet_prefix]
-  # Service endpoints for enhanced security
+  address_prefixes     = [var.appgw_subnet_prefix]
   service_endpoints    = ["Microsoft.Storage"]
 }
 
@@ -2239,14 +2240,30 @@ output "resource_group_location" {
   description = "The resource group location of the resource group being created by this module"
 }
 
-output "resource_group_name" {
-  value       = azurerm_resource_group.main.name
-  description = "The resource group name of the resource group being created by this module"
-}
-
 output "appgw_subnet_id" {
   value       = azurerm_subnet.subnet_appgw.id
-  description = "The ID of the Application Gateway subnet"
+  description = "The ID of the Application Gateway Subnet"
+}
+
+output "appgw_subnet" {
+  value       = azurerm_subnet.subnet_appgw
+  description = "The Application Gateway Subnet"
+}
+
+
+output "resource_group_name" {
+  value       = azurerm_resource_group.main.name
+  description = "The name of the resource group"
+}
+
+output "virtual_network_id" {
+  value       = azurerm_virtual_network.mainvnet.id
+  description = "The Virtual Network ID"
+}
+
+output "virtual_network_name" {
+  value       = azurerm_virtual_network.mainvnet.name
+  description = "The Virtual Network Name"
 }
 
 # Virtual Network ID - Equivalent to AWS VPC ID
