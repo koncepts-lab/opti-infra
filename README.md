@@ -92,6 +92,7 @@ opti-infra/
 │   ├── templates/              # Configuration templates
 │   ├── userdata/               # Initialization scripts
 │   └── main.tf                 # Primary Terraform configuration
+```
 
 #### Finding Required Azure IDs
 
