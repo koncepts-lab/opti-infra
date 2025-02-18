@@ -26,7 +26,6 @@ locals {
 resource "azurerm_resource_group" "main" {
   name     = var.resource_group_name
   location = var.location
-  appgw_subnet_prefix = var.appgw_subnet_prefix
   tags = {
     terraform = "true"
     env      = var.env
@@ -182,7 +181,7 @@ resource "azurerm_subnet" "subnet_appgw" {
   name                 = "${var.prefix}-${var.env}-appgw-subnet"
   resource_group_name  = azurerm_resource_group.main.name
   virtual_network_name = azurerm_virtual_network.mainvnet.name
-  address_prefixes     = [local.appgw_subnet_range]
+  address_prefixes     = [var.appgw_subnet_prefix]
   service_endpoints    = ["Microsoft.Storage"]
 }
 
