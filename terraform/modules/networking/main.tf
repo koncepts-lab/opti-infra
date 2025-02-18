@@ -10,13 +10,13 @@ locals {
   # Using /20 subnets to give each subnet 4096 IPs
   vm_subnet_ranges = {
     for idx, zone in local.availability_zones :
-    zone => cidrsubnet(local.base_cidr, 4, index(local.availability_zones, zone))  # Use index() instead of parseint
+    zone => cidrsubnet(local.base_cidr, 4, parseint(format("%d", idx), 10))
   }
   
   nat_subnet_ranges = {
     for idx, zone in local.availability_zones :
-    zone => cidrsubnet(local.base_cidr, 4, local.az_count + index(local.availability_zones, zone))  # Use index() here too
-  }
+    zone => cidrsubnet(local.base_cidr, 4, local.az_count + parseint(format("%d", idx), 10))
+  } 
   
   # AppGW gets its own subnet after all other subnets
   appgw_subnet_range = cidrsubnet(local.base_cidr, 4, 2 * local.az_count)  # Place after all zone-based subnets
