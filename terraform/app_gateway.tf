@@ -53,6 +53,11 @@ resource "azurerm_application_gateway" "app_gateway" {
     subnet_id = module.networking.appgw_subnet_id 
   }
 
+  backend_address_pool {
+  name = "${local.prefix}-backend-pool"
+  ip_addresses = [azurerm_network_interface.app_server_nic.private_ip_address]
+}
+
   frontend_port {
     name = "https-port"
     port = 443
