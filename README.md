@@ -26,29 +26,28 @@ This repository contains the Terraform configuration for deploying a robust, sec
    - Enhanced redundancy validation (1-3 zones)
    - Justification: Leverage Azure's flexible VM sizing and storage options
 
-### Infrastructure Architecture
+## Architecture Overview
 
 ### Network Design
 
-- **Availability Zones**: Distributed across 3 Availability Zones
+- **Availability Zones**: Distributed across availability zones based on redundancy parameter
 - **Subnet Configuration**: 
-  - 6 active subnets (2 per Availability Zone)
-    - Virtual Machine subnets
-    - NAT Gateway subnets
-  - 2 reserved subnets for future expansion
+  - VM subnets (equivalent to AWS public subnets)
+  - NAT Gateway subnets (equivalent to AWS private subnets)
+  - Application Gateway subnet
+- **CIDR Allocation**: Maintains the same IP address scheme as AWS implementation
 
 ### Key Components
 
 1. **Compute Resources**
-   - Single `app_server` deployed in Availability Zone 1
-   - Private IP configuration
-   - Jumpbox with configurable size (default: Standard_B1s)
-   - Customizable OS disk size and type
+   - App server deployed in private subnet with managed disk for database storage
+   - Jumpbox with public IP for secure administrative access
+   - Both VMs use RedHat Enterprise Linux (RHEL) images
 
 2. **Network Security**
-   - 3 NAT Gateways for high availability
-   - Application Gateway with SSL termination
-   - Comprehensive Network Security Groups (NSGs)
+   - Network Security Groups (NSGs) for network traffic control
+   - NAT Gateways for outbound connectivity from private subnets
+   - Application Gateway with SSL termination and WAF protection
 
 3. **Storage Infrastructure**
    - Three dedicated storage accounts:
@@ -59,7 +58,7 @@ This repository contains the Terraform configuration for deploying a robust, sec
 4. **Security Measures**
    - Azure Key Vault for certificate and secret management
    - Private network architecture
-   - Enhanced key-based Jumpbox access with separate key pairs
+   - Enhanced key-based SSH access with separate key pairs
 
 ## Prerequisites
 
@@ -75,6 +74,8 @@ Required credentials (in secrets.tfvars):
 - `jumpbox_admin_username`: Admin username for jumpbox
 - `jumpbox_ssh_key`: SSH public key for jumpbox access
 - `app_server_admin_username`: Admin username for app server
+- `app_server_ssh_key`: SSH public key for app server access
+- `key_vault_object_id`: Object ID for Key Vault access
 
 ## Repository Structure
 
@@ -91,6 +92,37 @@ opti-infra/
 │   ├── templates/              # Configuration templates
 │   ├── userdata/               # Initialization scripts
 │   └── main.tf                 # Primary Terraform configuration
+
+#### Finding Required Azure IDs
+
+Get your Azure Subscription ID and Tenant ID:
+```bash
+# List all subscriptions
+az account list --output table
+
+# Get details of the current subscription
+az account show --output json
+```
+
+Find your Object ID (for Key Vault access):
+```bash
+# For current user
+az ad signed-in-user show --query id --output tsv
+
+# For a service principal
+az ad sp show --id <app-id> --query id --output tsv
+
+# For another user
+az ad user show --id user@example.com --query id --output tsv
+```
+
+Find resource IDs for importing existing resources:
+```bash
+# Key Vault
+az keyvault show --name <vault-name> --resource-group <resource-group> --query id --output tsv
+
+# Key Vault Secret
+az keyvault secret show --name <secret-name> --vault-name <vault-name> --query id --output tsv
 ```
 
 ## Deployment Instructions
@@ -132,31 +164,13 @@ az storage container create \
    nano secrets.tfvars
    ```
 
-#### Required Configuration Values
-- **Azure Authentication**
-  - `subscription_id`: Your Azure subscription ID
-  - `tenant_id`: Your Azure tenant ID
-
-- **VM Access**
-  - `jumpbox_admin_username`: Jumpbox admin username
-  - `jumpbox_ssh_key`: Jumpbox SSH public key
-  - `app_server_admin_username`: App server admin username
-  - `app_server_ssh_key`: App server SSH public key
-
-- **Key Vault Access**
-  - `key_vault_object_id`: Key Vault access object ID
-
-#### Optional Configuration
-- Storage access keys
-- Email service credentials
-
-### 2. Initialize Terraform
+### 3. Initialize Terraform
 
 ```bash
 # Navigate to terraform directory
 cd terraform
 
-#Navigate to the correct directory:
+# Navigate to the correct environment directory
 cd terraform/environments/dev
 
 # Initialize Terraform with backend configuration
@@ -165,7 +179,7 @@ terraform init \
   -reconfigure
 ```
 
-### 3. Select Environment Workspace
+### 4. Select Environment Workspace
 
 ```bash
 # Create and select workspace
@@ -173,7 +187,7 @@ terraform workspace new dev
 terraform workspace select dev
 ```
 
-### 4. Plan Infrastructure
+### 5. Plan Infrastructure
 
 ```bash
 # Review planned changes
@@ -182,7 +196,7 @@ terraform plan \
   -var-file="secrets/secrets.tfvars"
 ```
 
-### 5. Apply Infrastructure
+### 6. Apply Infrastructure
 
 ```bash
 # Deploy infrastructure
@@ -193,7 +207,7 @@ terraform apply \
 
 ## Environment Management
 
-### Workspace Commands
+### Working with Different Environments
 
 ```bash
 # Development Environment
@@ -224,6 +238,29 @@ terraform init -backend-config="environments/prod/backend.tf" -reconfigure
 terraform plan -var-file="environments/prod/terraform.tfvars" -var-file="secrets/secrets.tfvars"
 ```
 
+## Accessing the Infrastructure
+
+### Jumpbox Access
+```bash
+ssh <jumpbox_admin_username>@<jumpbox_public_ip> -i /path/to/private_key
+```
+
+### App Server Access (via Jumpbox)
+```bash
+ssh <app_server_admin_username>@<app_server_private_ip> -i ~/.ssh/oii-internal-key-rsa
+```
+
+## Key Outputs
+
+After applying the Terraform configuration, you'll get these important outputs:
+
+- `jumpbox_public_ip`: Public IP address of the jumpbox
+- `app_server_private_ip`: Private IP of the app server
+- `jumpbox_private_ip`: Private IP address of the jumpbox
+- `dns_zone_nameservers`: DNS zone nameservers
+- `certificate_thumbprint`: SSL certificate thumbprint
+- `internal_ssh_key`: Internal SSH key for infrastructure access
+
 ## Destroying Infrastructure
 
 ⚠️ **Caution**: This will remove all resources in the current workspace.
@@ -242,7 +279,6 @@ terraform destroy \
 4. Limit SSH access to trusted IP ranges
 5. Monitor Key Vault and storage account logs
 
-
 ## Azure-Specific Maintenance Recommendations
 
 - Monitor NAT Gateway allocation and scaling
@@ -252,6 +288,33 @@ terraform destroy \
 - Audit Key Vault access logs
 - Regular review of RBAC assignments
 
+## Troubleshooting
+
+### Importing Existing Resources
+
+If you encounter issues with resources already existing in Azure, you may need to import them into Terraform state:
+
+```bash
+# Import Key Vault secrets
+terraform import azurerm_key_vault_secret.internal_ssh_key "https://your-key-vault-url/secrets/internal-ssh-private-key/version"
+terraform import azurerm_key_vault_secret.internal_ssh_public_key "https://your-key-vault-url/secrets/internal-ssh-public-key/version"
+
+# Import Key Vault access policies
+terraform import "azurerm_key_vault_access_policy.current_user" "/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.KeyVault/vaults/<vault-name>/objectId/<object-id>"
+
+# Import diagnostic settings
+terraform import azurerm_monitor_diagnostic_setting.app_gateway_diag "/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.Network/applicationGateways/<gateway-name>|<diagnostic-setting-name>"
+```
+
+You can also add import blocks to your Terraform files for consistent management:
+
+```terraform
+import {
+  to = azurerm_key_vault_secret.internal_ssh_key
+  id = "https://your-key-vault-url/secrets/internal-ssh-private-key/version"
+}
+```
+
 ## Support
 
-For infrastructure support or questions about the Azure migration, please contact the DevOps team.
+For infrastructure support or questions about the Azure deployment, please contact the DevOps team.

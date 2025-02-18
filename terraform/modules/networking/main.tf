@@ -5,21 +5,29 @@ locals {
   # Calculate zones based on redundancy
   az_count           = var.redundancy
   availability_zones = slice(["1", "2", "3"], 0, var.redundancy)
+
+  # Fixed offset indexes for subnet types
+  # With /24 subnets, you'll get 256 possible subnets from a /16 base CIDR
+  # Create wider spacing between subnet types to allow for future expansion
+  vm_subnet_start_index = 0     # VM subnets start at 10.0.0.0/24, 10.0.1.0/24, etc.
+  nat_subnet_start_index = 16   # NAT subnets start at 10.0.16.0/24, 10.0.17.0/24, etc.
+  appgw_subnet_index = 32       # AppGW subnet at 10.0.32.0/24
   
   # CIDR calculations
   # Using /20 subnets to give each subnet 4096 IPs
+  # For CIDR calculations with fixed offsets and /24 mask (8 bits for subnet instead 4 that is used now)
   vm_subnet_ranges = {
     for idx, zone in local.availability_zones :
-    zone => cidrsubnet(local.base_cidr, 4, parseint(format("%d", idx), 10))
+    zone => cidrsubnet(local.base_cidr, 4, local.vm_subnet_start_index + idx)
   }
   
   nat_subnet_ranges = {
     for idx, zone in local.availability_zones :
-    zone => cidrsubnet(local.base_cidr, 4, local.az_count + parseint(format("%d", idx), 10))
+    zone => cidrsubnet(local.base_cidr, 4, local.nat_subnet_start_index + idx)
   }
   
-  # AppGW gets its own subnet after all other subnets
-  appgw_subnet_range = cidrsubnet(local.base_cidr, 4, 2 * local.az_count)
+  # AppGW gets its own subnet with fixed index (8 instead of 4 if /24 instead of /20)
+  appgw_subnet_range = cidrsubnet(local.base_cidr, 4, local.appgw_subnet_index)
 }
 
 # Create a resource group
