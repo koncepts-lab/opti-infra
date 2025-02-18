@@ -1330,7 +1330,7 @@ module "networking" {
   appdata_replication_type = var.appdata_replication_type
 
   # Application Gateway Configuration
-  appgw_subnet_range = cidrsubnet(local.base_cidr, 4, 2 * local.az_count)
+  appgw_subnet_prefix = var.appgw_subnet_prefix
   app_gateway_sku_name   = var.app_gateway_sku_name
   app_gateway_sku_tier   = var.app_gateway_sku_tier
   app_gateway_capacity   = var.app_gateway_capacity
@@ -1848,13 +1848,13 @@ locals {
   # Using /20 subnets to give each subnet 4096 IPs
   vm_subnet_ranges = {
     for idx, zone in local.availability_zones :
-    zone => cidrsubnet(local.base_cidr, 4, parseint(idx, 10))  # Start at 10.0.0.0/20, 10.0.16.0/20, etc.
+    zone => cidrsubnet(local.base_cidr, 4, parseint(format("%d", idx), 10))
   }
   
   nat_subnet_ranges = {
     for idx, zone in local.availability_zones :
-    zone => cidrsubnet(local.base_cidr, 4, local.az_count + parseint(idx, 10))  # Start after VM subnets
-  }
+    zone => cidrsubnet(local.base_cidr, 4, local.az_count + parseint(format("%d", idx), 10))
+  } 
   
   # AppGW gets its own subnet after all other subnets
   appgw_subnet_range = cidrsubnet(local.base_cidr, 4, 2 * local.az_count)  # Place after all zone-based subnets

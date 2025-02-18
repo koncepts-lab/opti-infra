@@ -8,18 +8,50 @@ locals {
   
   # CIDR calculations
   # Using /20 subnets to give each subnet 4096 IPs
+  # Function to check if a subnet exists and return its range, otherwise calculate a new one
   vm_subnet_ranges = {
     for idx, zone in local.availability_zones :
-    zone => cidrsubnet(local.base_cidr, 4, parseint(format("%d", idx), 10))
+    zone => try(
+      data.azurerm_subnet.existing_vm_subnets[zone].address_prefixes[0], 
+      cidrsubnet(local.base_cidr, 4, parseint(format("%d", idx), 10))
+    )
   }
   
   nat_subnet_ranges = {
     for idx, zone in local.availability_zones :
-    zone => cidrsubnet(local.base_cidr, 4, local.az_count + parseint(format("%d", idx), 10))
-  } 
+    zone => try(
+      data.azurerm_subnet.existing_nat_subnets[zone].address_prefixes[0], 
+      cidrsubnet(local.base_cidr, 4, local.az_count + parseint(format("%d", idx), 10))
+    )
+  }
   
   # AppGW gets its own subnet after all other subnets
-  appgw_subnet_range = cidrsubnet(local.base_cidr, 4, 2 * local.az_count)  # Place after all zone-based subnets
+  appgw_subnet_range = try(
+    data.azurerm_subnet.existing_appgw_subnet[0].address_prefixes[0], 
+    cidrsubnet(local.base_cidr, 4, 2 * local.az_count)
+  )
+}
+
+# Data sources to check for existing subnets
+data "azurerm_subnet" "existing_vm_subnets" {
+  for_each             = toset(local.availability_zones)
+  name                 = "${var.prefix}-${var.env}-vm-sn-${each.value}"
+  virtual_network_name = azurerm_virtual_network.mainvnet.name
+  resource_group_name  = azurerm_resource_group.main.name
+}
+
+data "azurerm_subnet" "existing_nat_subnets" {
+  for_each             = toset(local.availability_zones)
+  name                 = "${var.prefix}-${var.env}-nat-sn-${each.value}"
+  virtual_network_name = azurerm_virtual_network.mainvnet.name
+  resource_group_name  = azurerm_resource_group.main.name
+}
+
+data "azurerm_subnet" "existing_appgw_subnet" {
+  count                = 1
+  name                 = "${var.prefix}-${var.env}-appgw-subnet"
+  virtual_network_name = azurerm_virtual_network.mainvnet.name
+  resource_group_name  = azurerm_resource_group.main.name
 }
 
 # Create a resource group
