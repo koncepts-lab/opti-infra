@@ -79,10 +79,6 @@ resource "azurerm_application_gateway" "app_gateway" {
     key_vault_secret_id = azurerm_key_vault_certificate.app_gateway_cert.secret_id
   }
 
-  backend_address_pool {
-    name = "${local.prefix}-backend-pool"
-  }
-
   backend_http_settings {
     name                  = "http-settings"
     cookie_based_affinity = "Disabled"
