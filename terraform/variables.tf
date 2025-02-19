@@ -54,11 +54,19 @@ variable "address_space" {
 variable "vm_subnet_prefix" {
   type        = string
   description = "Subnet prefix for VM subnet"
+  default     = "10.0.1.0/24"
 }
 
 variable "nat_subnet_prefix" {
   type        = string
   description = "Subnet prefix for NAT subnet"
+  default     = "10.0.2.0/24"
+}
+
+variable "appgw_subnet_prefix" {
+  type        = string
+  description = "Subnet prefix for Application Gateway subnet"
+  default     = "10.0.3.0/24"
 }
 
 # Jumpbox Configuration

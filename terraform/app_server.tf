@@ -209,14 +209,14 @@ resource "azurerm_storage_container" "app_data_container" {
 # Application Gateway Backend Pool Association
 # Associates the app server with the Application Gateway backend pool
 # -----------------------------------------------------------------------------
-resource "azurerm_app_configuration_key" "backend_pool" {
-  configuration_store_id = azurerm_application_gateway.app_gateway.id
-  key                   = "${local.prefix}-backend-pool"
-  value                 = azurerm_network_interface.app_server_nic.private_ip_address
-  
-  depends_on = [
-    azurerm_application_gateway.app_gateway,
-    azurerm_network_interface.app_server_nic
-  ]
-}
+#resource "azurerm_app_configuration_key" "backend_pool" {
+#  configuration_store_id = azurerm_application_gateway.app_gateway.id
+#  key                   = "${local.prefix}-backend-pool"
+#  value                 = azurerm_network_interface.app_server_nic.private_ip_address
+#  
+#  depends_on = [
+#    azurerm_application_gateway.app_gateway,
+#    azurerm_network_interface.app_server_nic
+#  ]
+#}
 

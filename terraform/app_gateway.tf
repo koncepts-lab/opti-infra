@@ -50,8 +50,13 @@ resource "azurerm_application_gateway" "app_gateway" {
 
   gateway_ip_configuration {
     name      = "gateway-ip-config"
-    subnet_id = module.networking.vm_subnet_id["1"]
+    subnet_id = module.networking.appgw_subnet_id 
   }
+
+  backend_address_pool {
+  name = "${local.prefix}-backend-pool"
+  ip_addresses = [azurerm_network_interface.app_server_nic.private_ip_address]
+}
 
   frontend_port {
     name = "https-port"
@@ -72,10 +77,6 @@ resource "azurerm_application_gateway" "app_gateway" {
   ssl_certificate {
     name                = "app-gateway-cert"
     key_vault_secret_id = azurerm_key_vault_certificate.app_gateway_cert.secret_id
-  }
-
-  backend_address_pool {
-    name = "${local.prefix}-backend-pool"
   }
 
   backend_http_settings {
@@ -190,6 +191,14 @@ resource "azurerm_dns_cname_record" "app" {
   resource_group_name = module.networking.resource_group_name
   ttl                = 60
   record             = azurerm_public_ip.agw.ip_address  # Use IP address instead of FQDN
+}
+
+resource "azurerm_dns_a_record" "apex" {
+  name                = "@"  # @ represents the apex domain
+  zone_name           = azurerm_dns_zone.oi_portal.name
+  resource_group_name = module.networking.resource_group_name
+  ttl                 = 60
+  records             = [azurerm_public_ip.agw.ip_address]
 }
 
 resource "azurerm_user_assigned_identity" "app_gateway_identity" {

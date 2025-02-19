@@ -31,8 +31,10 @@ resource "azurerm_key_vault_certificate" "oi_portal_cert" {
 
 
   depends_on = [
-    azurerm_key_vault_access_policy.current_user,
-    azurerm_key_vault.vault
+    azurerm_key_vault.vault,
+    azurerm_key_vault_access_policy.service_principal,
+    azurerm_key_vault_access_policy.app_gateway_identity_policy,
+    azurerm_key_vault_access_policy.current_user
   ]
 
   certificate_policy {
@@ -121,8 +123,10 @@ resource "azurerm_key_vault_certificate" "app_gateway_cert" {
   key_vault_id = azurerm_key_vault.vault.id
 
   depends_on = [
-    azurerm_key_vault_access_policy.current_user,
-    azurerm_key_vault.vault
+    azurerm_key_vault.vault,
+    azurerm_key_vault_access_policy.service_principal,
+    azurerm_key_vault_access_policy.app_gateway_identity_policy,
+    azurerm_key_vault_access_policy.current_user
   ]
 
   certificate_policy {

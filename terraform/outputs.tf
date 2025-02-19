@@ -15,6 +15,18 @@ output "jumpbox_private_ip" {
   description = "Private IP address of the jumpbox"
 }
 
+# Application Gateway subnet output
+output "appgw_subnet_id" {
+  value       = module.networking.appgw_subnet_id
+  description = "The ID of the Application Gateway Subnet"
+}
+
+output "appgw_subnet" {
+  value       = module.networking.appgw_subnet
+  description = "The Application Gateway Subnet"
+}
+
+
 resource "local_file" "ansible_inventory" {
   filename = "${path.module}/inventory.ini"
   content  = templatefile("${path.module}/templates/inventory.ini.tftpl", {
@@ -35,5 +47,21 @@ output "internal_ssh_key" {
 output "backup_storage_name" {
   value       = azurerm_storage_account.backup_storage.name
   description = "Name of the backup storage account"
+}
+
+output "application_gateway_ip" {
+  value       = azurerm_public_ip.agw.ip_address
+  description = "Public IP address of the Application Gateway"
+}
+
+output "jumpbox_access_address" {
+  value       = var.jumpbox_enable_public_ip ? azurerm_public_ip.jumpbox_ip[0].ip_address : null
+  description = "Public IP address of the jumpbox (equivalent to AWS public_dns)"
+  sensitive   = true
+}
+
+output "appserver_private_address" {
+  value       = azurerm_network_interface.app_server_nic.private_ip_address
+  description = "Private IP of the app server (equivalent to AWS private_dns)"
 }
 

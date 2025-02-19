@@ -34,6 +34,11 @@ variable "address_space" {
   description = "Address space for the virtual network"
 }
 
+variable "appgw_subnet_prefix" {
+  type        = string
+  description = "Address prefix for Application Gateway subnet"
+}
+
 variable "vm_subnet_prefix" {
   type        = string
   description = "Address prefix for VM subnet"
